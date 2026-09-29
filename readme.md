@@ -1,16 +1,23 @@
 # Omni Wheel URDF Generator & 3D Web Studio
 
+![Omniwheel Collision URDF Studio](intro.png)
+
 This repository provides tools and an interactive Web GUI for designing, visualizing, and generating URDF/XACRO collision models for omni-directional wheels with multiple rollers.
 
 ## Features
 
-- 🌐 **Interactive 3D Web Studio**: Real-time WebGL/Three.js 3D visualization of wheel hub, rollers (spheres & cylinder barrels), collision wireframes, and rotation axes.
-- 🔵 **Multiple Collision Shapes**: Support for both **Sphere** (`<sphere>`) and **Cylinder** (`<cylinder>`) roller collision geometries with accurate inertia tensors and rotational alignment.
+- 🌐 **Interactive 3D Web Studio**: Real-time WebGL/Three.js 3D visualization of wheel hub, rollers (spheres & cylinder barrels), collision wireframes, and rotation axes in orthographic perspective.
+- 🔬 **ICRA 2024 Paper Collider Models**: Compound sub-element collider representations based on *"Simulation Modeling of Highly Dynamic Omnidirectional Mobile Robots Based on Real-World Data"*:
+  - **Model O (`o11`)**: 11-sphere optimized overlapping envelope with center sphere for smoothest contact and minimal drift.
+  - **Model S (`s4`, `s6`, `s8`, `s10`)**: Symmetrical spheres with bearing notch clearance gap (6S recommended for real-time physics performance).
+  - **Model C (`c4`, `c7`)**: Segmented concentric cylinders matching roller barrel curvature.
+  - **Basic Models**: Single sphere (`sphere`) and cylinder (`cylinder`).
+- ⚖️ **Accurate Parallel-Axis Inertia**: Analytical mass distribution and composite inertia tensor calculation $(I_{xx}, I_{yy}, I_{zz})$ for all compound sub-element configurations.
 - ⚙️ **Parametric Layer Editor**: Configure multi-layer omni wheels with dynamic offsets, phase angles, and roller counts.
-- 📐 **Multiple Orientation Methods**: Supports both `axis` (tangential rotation vector) and `rotation` (RPY pitch).
-- 🤖 **URDF / Xacro Generation**: Instant Xacro collision macro snippet or complete standalone URDF model ready for ROS / RViz.
+- 📐 **Clean Xacro Macros**: Standard `rotation` method defines collision and inertia once inside `<xacro:macro name="roller">` and reuses it cleanly across all rollers.
+- 🤖 **URDF / Xacro Generation**: Instant Xacro collision macro snippet or complete standalone URDF model ready for ROS, Gazebo, and RViz.
 - 📦 **Pixi Package Management**: Reproducible environment and tasks managed with [pixi](https://pixi.sh).
-- 💾 **Presets & YAML Management**: Built-in industry presets (100mm dual-layer, 125mm high-density, 150mm triple-layer heavy duty, etc.), plus upload/save YAML configs.
+- 💾 **Presets & YAML Management**: Built-in industry and paper presets, plus upload/save YAML configs.
 
 ---
 
