@@ -6,6 +6,8 @@
 const state = {
   wheel_radius_mm: 50.0,
   tangent_radius_mm: 8.0,
+  roller_shape: 'sphere',
+  roller_length_mm: 15.0,
   roller_weight_kg: 0.012,
   roller_method: 'axis',
   prefix: '${prefix}',
@@ -36,6 +38,145 @@ const LAYER_COLORS = [
   0xeab308  // Yellow
 ];
 
+// Built-in Default Presets (Available instantly even offline)
+const DEFAULT_PRESETS = {
+  "standard_dual_layer": {
+    "name": "Standard Dual-Layer (100mm, 2x8 rollers)",
+    "description": "Standard 100mm omni wheel with 2 offset layers of 8 rollers each (total 16).",
+    "wheel_radius": 0.050,
+    "tangent_radius": 0.008,
+    "roller_shape": "sphere",
+    "roller_length": 0.015,
+    "roller_weight": 0.012,
+    "roller_method": "axis",
+    "global_rollers_per_layer": 8,
+    "layers": [
+      {"offset": -0.009, "angle": 0.0, "rollers": 8},
+      {"offset": 0.009, "angle": 22.5, "rollers": 8}
+    ]
+  },
+  "dual_layer_12_rollers": {
+    "name": "High-Density Dual-Layer (125mm, 2x12 rollers)",
+    "description": "Smooth rolling dual-layer omni with 12 rollers per layer (24 total).",
+    "wheel_radius": 0.06175,
+    "tangent_radius": 0.006,
+    "roller_shape": "sphere",
+    "roller_length": 0.015,
+    "roller_weight": 0.010,
+    "roller_method": "axis",
+    "global_rollers_per_layer": 12,
+    "layers": [
+      {"offset": -0.012, "angle": 0.0, "rollers": 12},
+      {"offset": 0.012, "angle": 15.0, "rollers": 12}
+    ]
+  },
+  "cylinder_dual_layer": {
+    "name": "Cylinder Roller Omni (100mm, 2x8 barrels)",
+    "description": "Dual-layer omni wheel with cylindrical barrel rollers.",
+    "wheel_radius": 0.050,
+    "tangent_radius": 0.008,
+    "roller_shape": "cylinder",
+    "roller_length": 0.018,
+    "roller_weight": 0.015,
+    "roller_method": "axis",
+    "global_rollers_per_layer": 8,
+    "layers": [
+      {"offset": -0.010, "angle": 0.0, "rollers": 8},
+      {"offset": 0.010, "angle": 22.5, "rollers": 8}
+    ]
+  },
+  "triple_layer_heavy": {
+    "name": "Triple-Layer Heavy Duty (150mm, 3x6 rollers)",
+    "description": "3 staggered layers for maximum ground contact and load distribution.",
+    "wheel_radius": 0.075,
+    "tangent_radius": 0.010,
+    "roller_shape": "sphere",
+    "roller_length": 0.020,
+    "roller_weight": 0.025,
+    "roller_method": "axis",
+    "global_rollers_per_layer": 6,
+    "layers": [
+      {"offset": -0.016, "angle": 0.0, "rollers": 6},
+      {"offset": 0.000, "angle": 20.0, "rollers": 6},
+      {"offset": 0.016, "angle": 40.0, "rollers": 6}
+    ]
+  },
+  "example_repo": {
+    "name": "Repository Example (70mm, 2x4 rollers)",
+    "description": "Configuration matching example.yaml in repo (8 rollers across 2 layers).",
+    "wheel_radius": 0.035,
+    "tangent_radius": 0.020,
+    "roller_shape": "sphere",
+    "roller_length": 0.020,
+    "roller_weight": 0.015,
+    "roller_method": "axis",
+    "global_rollers_per_layer": 4,
+    "layers": [
+      {"offset": 0.004625, "angle": 0.0, "rollers": 4},
+      {"offset": 0.013875, "angle": 45.0, "rollers": 4}
+    ]
+  }
+};
+
+let presetsData = Object.assign({}, DEFAULT_PRESETS);
+
+function populatePresetsDropdown(presets) {
+  const select = document.getElementById('preset-selector');
+  if (!select) return;
+  select.innerHTML = '<option value="">-- Load Standard Preset --</option>';
+  for (const [key, preset] of Object.entries(presets)) {
+    const opt = document.createElement('option');
+    opt.value = key;
+    opt.textContent = preset.name;
+    select.appendChild(opt);
+  }
+}
+
+function localComputeRollerData() {
+  const amp = (state.wheel_radius_mm - state.tangent_radius_mm) / 1000.0;
+  const roller_data = [];
+  let id = 1;
+
+  state.layers.forEach((layer, l_idx) => {
+    const offset = layer.offset_mm / 1000.0;
+    const num = parseInt(layer.rollers) || 8;
+    for (let i = 0; i < num; i++) {
+      const theta = (360.0 * i / num + layer.angle_deg) % 360.0;
+      const rad = theta * Math.PI / 180.0;
+      const x = amp * Math.cos(rad);
+      const y = offset;
+      const z = amp * Math.sin(rad);
+      const world_axis = [-Math.sin(rad), 0.0, Math.cos(rad)];
+      const rpy = state.roller_method === 'rotation' ? [0.0, -rad, 0.0] : [0.0, 0.0, 0.0];
+      const axis = state.roller_method === 'rotation' ? [0.0, 0.0, 1.0] : world_axis;
+      const cylinder_rpy = state.roller_method === 'axis' ? [0.0, -rad, 0.0] : [0.0, 0.0, 0.0];
+
+      roller_data.push({
+        id: id++,
+        theta_deg: theta,
+        offset_m: offset,
+        position: [x, y, z],
+        rpy: rpy,
+        cylinder_rpy: cylinder_rpy,
+        axis: axis,
+        world_axis: world_axis,
+        layer: l_idx
+      });
+    }
+  });
+
+  return {
+    roller_data: roller_data,
+    metrics: {
+      total_rollers: roller_data.length,
+      outer_diameter_mm: state.wheel_radius_mm * 2,
+      hub_diameter_mm: Math.max(0, (state.wheel_radius_mm - state.tangent_radius_mm) * 2),
+      roller_diameter_mm: state.tangent_radius_mm * 2,
+      total_roller_mass_kg: roller_data.length * state.roller_weight_kg
+    }
+  };
+}
+
 // Three.js Globals
 let scene, camera, renderer, controls;
 let wheelGroup, hubMesh, gridHelper, axesHelper;
@@ -44,23 +185,46 @@ let arrowHelpers = [];
 let raycaster, mouse;
 let animationFrameId;
 
-// Initialize on DOM Ready
-document.addEventListener('DOMContentLoaded', () => {
-  initThreeJS();
-  initEventListeners();
+// Initialize function with safe fallbacks
+function initializeApp() {
+  populatePresetsDropdown(DEFAULT_PRESETS);
+
+  try {
+    initThreeJS();
+    // Render immediate local 3D preview
+    const initialData = localComputeRollerData();
+    state.currentData = initialData;
+    updateThreeScene(initialData);
+    updateMetricsHUD(initialData.metrics);
+  } catch (err) {
+    console.error("Three.js init error:", err);
+  }
+
+  try {
+    initEventListeners();
+  } catch (err) {
+    console.error("Event listeners error:", err);
+  }
+
+  renderLayersUI();
   loadPresetsList();
   loadSavedConfigsList();
-  renderLayersUI();
   triggerCompute();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initializeApp);
+} else {
+  initializeApp();
+}
 
 /* -------------------------------------------------------------
  * 1. Three.js Scene Initialization
  * ------------------------------------------------------------- */
 function initThreeJS() {
   const container = document.getElementById('viewport-container');
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  const width = (container && container.clientWidth) ? container.clientWidth : 800;
+  const height = (container && container.clientHeight) ? container.clientHeight : 500;
 
   // Scene
   scene = new THREE.Scene();
@@ -81,12 +245,14 @@ function initThreeJS() {
   renderer.shadowMap.enabled = true;
 
   // Controls
-  controls = new THREE.OrbitControls(camera, renderer.domElement);
-  controls.enableDamping = true;
-  controls.dampingFactor = 0.05;
-  controls.minDistance = 20;
-  controls.maxDistance = 1500;
-  controls.target.set(0, 0, 0);
+  if (typeof THREE.OrbitControls !== 'undefined') {
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = 20;
+    controls.maxDistance = 1500;
+    controls.target.set(0, 0, 0);
+  }
 
   // Lighting
   const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
@@ -122,14 +288,17 @@ function initThreeJS() {
   canvas.addEventListener('mousemove', onMouseMove);
   canvas.addEventListener('click', onCanvasClick);
 
+  setTimeout(onWindowResize, 60);
+  setTimeout(onWindowResize, 250);
+
   animate();
 }
 
 function onWindowResize() {
   const container = document.getElementById('viewport-container');
-  if (!container) return;
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  if (!container || !camera || !renderer) return;
+  const width = container.clientWidth || 800;
+  const height = container.clientHeight || 500;
   camera.aspect = width / height;
   camera.updateProjectionMatrix();
   renderer.setSize(width, height);
@@ -213,9 +382,15 @@ function updateThreeScene(data) {
     wheelGroup.add(boreMesh);
   }
 
-  // 2. Rollers
+  // 2. Rollers (Sphere or Cylinder)
+  const isCylinder = state.roller_shape === 'cylinder';
+  const rollerLen = state.roller_length_mm;
+
   const sphereGeom = new THREE.SphereGeometry(tangentRadiusMm, 24, 20);
-  const wireGeom = new THREE.SphereGeometry(tangentRadiusMm * 1.01, 12, 10);
+  const wireSphereGeom = new THREE.SphereGeometry(tangentRadiusMm * 1.01, 12, 10);
+
+  const cylinderGeom = isCylinder ? new THREE.CylinderGeometry(tangentRadiusMm, tangentRadiusMm, rollerLen, 24) : null;
+  const wireCylinderGeom = isCylinder ? new THREE.CylinderGeometry(tangentRadiusMm * 1.01, tangentRadiusMm * 1.01, rollerLen * 1.01, 16) : null;
 
   data.roller_data.forEach(r => {
     // Note: positions are in meters in backend, convert to mm for Three.js
@@ -226,35 +401,48 @@ function updateThreeScene(data) {
     const layerIdx = r.layer || 0;
     const colorHex = LAYER_COLORS[layerIdx % LAYER_COLORS.length];
 
+    const spinVector = r.world_axis || r.axis;
+    const dir = new THREE.Vector3(spinVector[0], spinVector[1], spinVector[2]).normalize();
+
     // Solid roller mesh
     const rollerMat = new THREE.MeshStandardMaterial({
       color: colorHex,
       roughness: 0.3,
       metalness: 0.4
     });
-    const roller = new THREE.Mesh(sphereGeom, rollerMat);
+
+    const geomToUse = isCylinder ? cylinderGeom : sphereGeom;
+    const roller = new THREE.Mesh(geomToUse, rollerMat);
     roller.position.set(posX, posY, posZ);
+
+    if (isCylinder) {
+      // Cylinder is along Y (0,1,0) by default in Three.js, orient along spin vector
+      roller.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    }
+
     roller.userData = { rollerData: r };
     wheelGroup.add(roller);
     rollerMeshes.push(roller);
 
     // Collision Wireframe
     if (state.display.showWireframe) {
+      const wireGeomToUse = isCylinder ? wireCylinderGeom : wireSphereGeom;
       const wireMat = new THREE.MeshBasicMaterial({
         color: 0xffffff,
         wireframe: true,
         transparent: true,
-        opacity: 0.2
+        opacity: 0.25
       });
-      const wireMesh = new THREE.Mesh(wireGeom, wireMat);
+      const wireMesh = new THREE.Mesh(wireGeomToUse, wireMat);
       wireMesh.position.set(posX, posY, posZ);
+      if (isCylinder) {
+        wireMesh.quaternion.copy(roller.quaternion);
+      }
       wheelGroup.add(wireMesh);
     }
 
     // Rotation Axis Arrow (uses true physical spin axis in 3D world space)
-    const spinVector = r.world_axis || r.axis;
     if (state.display.showArrows && spinVector) {
-      const dir = new THREE.Vector3(spinVector[0], spinVector[1], spinVector[2]).normalize();
       const origin = new THREE.Vector3(posX, posY, posZ);
       const arrowLength = tangentRadiusMm * 2.2;
       const arrowHelper = new THREE.ArrowHelper(dir, origin, arrowLength, 0xef4444, tangentRadiusMm * 0.7, tangentRadiusMm * 0.4);
@@ -363,6 +551,8 @@ async function performCompute() {
   const payload = {
     wheel_radius: state.wheel_radius_mm / 1000.0,
     tangent_radius: state.tangent_radius_mm / 1000.0,
+    roller_shape: state.roller_shape,
+    roller_length: state.roller_length_mm / 1000.0,
     roller_weight: state.roller_weight_kg,
     roller_method: state.roller_method,
     prefix: state.prefix,
@@ -583,8 +773,14 @@ function initEventListeners() {
   const rollerMethodSelect = document.getElementById('roller-method');
   const urdfPrefixInput = document.getElementById('urdf-prefix');
 
+  const rollerShapeSelect = document.getElementById('roller-shape');
+  const rollerLengthInput = document.getElementById('roller-length');
+  const rollerLengthContainer = document.getElementById('roller-length-container');
+
   wheelRadiusInput.value = state.wheel_radius_mm;
   tangentRadiusInput.value = state.tangent_radius_mm;
+  rollerShapeSelect.value = state.roller_shape;
+  rollerLengthInput.value = state.roller_length_mm;
   rollerWeightInput.value = state.roller_weight_kg;
   rollerMethodSelect.value = state.roller_method;
   urdfPrefixInput.value = state.prefix;
@@ -596,6 +792,22 @@ function initEventListeners() {
 
   tangentRadiusInput.addEventListener('input', (e) => {
     state.tangent_radius_mm = parseFloat(e.target.value) || 8;
+    triggerCompute();
+  });
+
+  rollerShapeSelect.addEventListener('change', (e) => {
+    state.roller_shape = e.target.value;
+    if (state.roller_shape === 'cylinder') {
+      rollerLengthContainer.style.opacity = '1';
+      rollerLengthContainer.style.pointerEvents = 'auto';
+    } else {
+      rollerLengthContainer.style.opacity = '0.5';
+    }
+    triggerCompute();
+  });
+
+  rollerLengthInput.addEventListener('input', (e) => {
+    state.roller_length_mm = parseFloat(e.target.value) || 15;
     triggerCompute();
   });
 
@@ -673,24 +885,16 @@ function initEventListeners() {
   fileInput.addEventListener('change', handleFileUpload);
 }
 
-/* -------------------------------------------------------------
- * 8. Presets & Saved Configs
- * ------------------------------------------------------------- */
-let presetsData = {};
 async function loadPresetsList() {
   try {
     const res = await fetch('/api/presets');
-    presetsData = await res.json();
-    const select = document.getElementById('preset-selector');
-    select.innerHTML = '<option value="">-- Load Standard Preset --</option>';
-    for (const [key, preset] of Object.entries(presetsData)) {
-      const opt = document.createElement('option');
-      opt.value = key;
-      opt.textContent = preset.name;
-      select.appendChild(opt);
+    if (res.ok) {
+      const serverPresets = await res.json();
+      presetsData = Object.assign({}, DEFAULT_PRESETS, serverPresets);
+      populatePresetsDropdown(presetsData);
     }
   } catch (err) {
-    console.error("Failed to load presets", err);
+    console.warn("Could not fetch server presets, using built-in defaults:", err);
   }
 }
 
@@ -700,11 +904,15 @@ function loadPreset(key) {
 
   state.wheel_radius_mm = p.wheel_radius * 1000;
   state.tangent_radius_mm = p.tangent_radius * 1000;
+  state.roller_shape = p.roller_shape || 'sphere';
+  state.roller_length_mm = (p.roller_length || (p.tangent_radius * 2.5)) * 1000;
   state.roller_weight_kg = p.roller_weight;
   state.roller_method = p.roller_method;
 
   document.getElementById('wheel-radius').value = state.wheel_radius_mm;
   document.getElementById('tangent-radius').value = state.tangent_radius_mm;
+  document.getElementById('roller-shape').value = state.roller_shape;
+  document.getElementById('roller-length').value = state.roller_length_mm;
   document.getElementById('roller-weight').value = state.roller_weight_kg;
   document.getElementById('roller-method').value = state.roller_method;
 
@@ -751,11 +959,15 @@ function applyParsedData(data) {
 
   state.wheel_radius_mm = cfg.wheel_radius * 1000;
   state.tangent_radius_mm = cfg.tangent_radius * 1000;
+  state.roller_shape = cfg.roller_shape || 'sphere';
+  state.roller_length_mm = (cfg.roller_length || (cfg.tangent_radius * 2.5)) * 1000;
   state.roller_weight_kg = cfg.roller_weight;
   state.roller_method = cfg.roller_method || 'axis';
 
   document.getElementById('wheel-radius').value = state.wheel_radius_mm;
   document.getElementById('tangent-radius').value = state.tangent_radius_mm;
+  document.getElementById('roller-shape').value = state.roller_shape;
+  document.getElementById('roller-length').value = state.roller_length_mm;
   document.getElementById('roller-weight').value = state.roller_weight_kg;
   document.getElementById('roller-method').value = state.roller_method;
 
@@ -893,3 +1105,6 @@ function exportTableCSV() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// Expose switchTab globally for inline onclick handlers
+window.switchTab = switchTab;

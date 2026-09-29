@@ -33,6 +33,15 @@ app = FastAPI(
 # Mount static files
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
+@app.middleware("http")
+async def add_cache_control_headers(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 
 class LayerModel(BaseModel):
     offset: float = Field(..., description="Y-axis offset in meters")
@@ -43,6 +52,8 @@ class LayerModel(BaseModel):
 class ComputeRequest(BaseModel):
     wheel_radius: float = Field(0.050, gt=0, description="Wheel radius in meters")
     tangent_radius: float = Field(0.008, gt=0, description="Roller collision radius in meters")
+    roller_shape: str = Field("sphere", pattern="^(sphere|cylinder)$", description="Roller collision shape")
+    roller_length: Optional[float] = Field(None, gt=0, description="Roller cylinder length in meters")
     roller_weight: float = Field(0.010, gt=0, description="Roller mass in kg")
     roller_method: str = Field("axis", pattern="^(axis|rotation)$", description="Orientation method")
     layers: List[LayerModel] = Field(default_factory=list)
@@ -102,10 +113,13 @@ async def load_saved_config(filename: str):
 @app.post("/api/compute")
 async def compute(req: ComputeRequest):
     try:
+        actual_len = req.roller_length or round(req.tangent_radius * 2.5, 4)
         if req.custom_positions and len(req.custom_positions) > 0:
             config = {
                 'wheel_radius': req.wheel_radius,
                 'tangent_radius': req.tangent_radius,
+                'roller_shape': req.roller_shape,
+                'roller_length': actual_len,
                 'roller_weight': req.roller_weight,
                 'roller_count': len(req.custom_positions),
                 'roller_method': req.roller_method,
@@ -119,7 +133,9 @@ async def compute(req: ComputeRequest):
                 tangent_radius=req.tangent_radius,
                 roller_weight=req.roller_weight,
                 roller_method=req.roller_method,
-                layers=layers_dict
+                layers=layers_dict,
+                roller_shape=req.roller_shape,
+                roller_length=actual_len
             )
 
         roller_data = compute_roller_data(config)
@@ -187,6 +203,10 @@ async def process_parsed_config(config: Dict[str, Any], raw_yaml: str = ""):
         off = round(float(pos[1]), 6)
         layer_info.append(offset_to_layer_idx.get(off, 0))
 
+    roller_shape = config.get('roller_shape', 'sphere')
+    roller_length = float(config.get('roller_length', round(tangent_radius * 2.5, 4)))
+    config['roller_shape'] = roller_shape
+    config['roller_length'] = roller_length
     config['layer_info'] = layer_info
     config['roller_count'] = len(positions)
     roller_data = compute_roller_data(config)
@@ -196,6 +216,8 @@ async def process_parsed_config(config: Dict[str, Any], raw_yaml: str = ""):
 
     return {
         "success": True,
+        "roller_shape": roller_shape,
+        "roller_length": roller_length,
         "config": config,
         "layers": layers,
         "roller_data": roller_data,

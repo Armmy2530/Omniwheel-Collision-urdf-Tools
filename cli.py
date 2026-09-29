@@ -27,9 +27,9 @@ EXAMPLE_CONFIG = CONFIG_DIR / "example.yaml"
 def cmd_gui(args):
     """Launch the Web-based GUI visualizer."""
     import uvicorn
-    from web.app import app
-    print(f"🚀 Starting Omniwheel Studio Web GUI on http://{args.host}:{args.port}")
-    uvicorn.run(app, host=args.host, port=args.port, reload=args.reload)
+    display_host = "localhost" if args.host in ("0.0.0.0", "::") else args.host
+    print(f"🚀 Starting Omniwheel Studio Web GUI on http://{display_host}:{args.port} (network: http://{args.host}:{args.port})")
+    uvicorn.run("web.app:app", host=args.host, port=args.port, reload=args.reload)
 
 
 def cmd_create_urdf(args):
@@ -86,6 +86,8 @@ def cmd_gen_yaml(args):
         config = calculate_roller_positions_from_layers(
             wheel_radius=args.wheel_radius,
             tangent_radius=args.tangent_radius,
+            roller_shape=args.roller_shape,
+            roller_length=args.roller_length,
             roller_weight=args.roller_weight,
             roller_method=args.roller_method,
             layers=layers
@@ -122,6 +124,8 @@ def main():
     yaml_parser.add_argument("--preset", choices=list(PRESETS.keys()), default=None, help="Use a built-in preset")
     yaml_parser.add_argument("--wheel-radius", type=float, default=0.06175, help="Wheel base radius (m)")
     yaml_parser.add_argument("--tangent-radius", type=float, default=0.006, help="Roller collision radius (m)")
+    yaml_parser.add_argument("--roller-shape", choices=["sphere", "cylinder"], default="sphere", help="Collision shape (sphere or cylinder)")
+    yaml_parser.add_argument("--roller-length", type=float, default=None, help="Roller length in meters (for cylinder)")
     yaml_parser.add_argument("--roller-weight", type=float, default=0.010, help="Roller mass (kg)")
     yaml_parser.add_argument("--roller-method", choices=["axis", "rotation"], default="axis", help="Orientation method")
     yaml_parser.add_argument("--rollers-per-layer", type=int, default=12, help="Number of rollers per layer")

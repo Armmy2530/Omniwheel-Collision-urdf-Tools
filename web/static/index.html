@@ -3,14 +3,17 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <title>Omniwheel Collision URDF Studio</title>
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Three.js and OrbitControls -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Tailwind CSS (Served locally) -->
+  <script src="/static/vendor/tailwindcss.js"></script>
+  <!-- Three.js and OrbitControls (Served locally for 100% offline & reliable rendering) -->
+  <script src="/static/vendor/three.min.js"></script>
+  <script src="/static/vendor/OrbitControls.js"></script>
   <!-- Custom CSS -->
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=2.2">
 </head>
 <body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden select-none">
 
@@ -99,6 +102,22 @@
                 <option value="axis">axis (URDF axis)</option>
                 <option value="rotation">rotation (Pitch)</option>
               </select>
+            </div>
+
+            <div>
+              <label class="text-slate-400 block mb-1">Collision Shape</label>
+              <select id="roller-shape" class="input-number-compact font-semibold text-cyan-300">
+                <option value="sphere">Sphere (Ball)</option>
+                <option value="cylinder">Cylinder (Barrel)</option>
+              </select>
+            </div>
+
+            <div id="roller-length-container">
+              <label class="text-slate-400 block mb-1">Roller Length</label>
+              <div class="relative">
+                <input type="number" id="roller-length" step="0.5" min="1" max="200" value="15" class="input-number-compact pr-8">
+                <span class="absolute right-2 top-1 text-slate-500 text-xs">mm</span>
+              </div>
             </div>
           </div>
 
@@ -289,6 +308,6 @@
   </div>
 
   <!-- Custom App JS -->
-  <script src="/static/js/app.js"></script>
+  <script src="/static/js/app.js?v=2.2"></script>
 </body>
 </html>

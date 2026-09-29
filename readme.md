@@ -4,7 +4,8 @@ This repository provides tools and an interactive Web GUI for designing, visuali
 
 ## Features
 
-- 🌐 **Interactive 3D Web Studio**: Real-time WebGL/Three.js 3D visualization of wheel hub, roller spheres, collision wireframes, and rotation axes.
+- 🌐 **Interactive 3D Web Studio**: Real-time WebGL/Three.js 3D visualization of wheel hub, rollers (spheres & cylinder barrels), collision wireframes, and rotation axes.
+- 🔵 **Multiple Collision Shapes**: Support for both **Sphere** (`<sphere>`) and **Cylinder** (`<cylinder>`) roller collision geometries with accurate inertia tensors and rotational alignment.
 - ⚙️ **Parametric Layer Editor**: Configure multi-layer omni wheels with dynamic offsets, phase angles, and roller counts.
 - 📐 **Multiple Orientation Methods**: Supports both `axis` (tangential rotation vector) and `rotation` (RPY pitch).
 - 🤖 **URDF / Xacro Generation**: Instant Xacro collision macro snippet or complete standalone URDF model ready for ROS / RViz.
