@@ -188,11 +188,13 @@
 
         <!-- Camera Preset Overlay Toolbar -->
         <div class="absolute top-3 left-3 flex items-center bg-slate-900/80 backdrop-blur border border-slate-700/80 rounded-lg p-1 space-x-1 shadow-lg z-10 text-xs">
-          <button id="cam-iso" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Perspective (Isometric)">3D</button>
+          <button id="cam-iso" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Isometric 3D View">3D</button>
           <button id="cam-front" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Front View (X-Z plane facing Y)">Front (XZ)</button>
           <button id="cam-side" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Side View (Y-Z plane)">Side (YZ)</button>
           <button id="cam-top" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Top View (X-Y plane)">Top (XY)</button>
           <button id="cam-reset" class="px-2.5 py-1 hover:bg-slate-800 text-cyan-400 rounded transition" title="Reset View">Reset</button>
+          <span class="h-3.5 w-[1px] bg-slate-700 mx-1"></span>
+          <button id="cam-mode" class="px-2 py-0.5 bg-cyan-950 text-cyan-400 border border-cyan-800 rounded font-semibold transition" title="Switch between Orthographic and Perspective Projection">Ortho</button>
         </div>
 
         <!-- Dimensions & Status HUD -->
@@ -308,6 +310,6 @@
   </div>
 
   <!-- Custom App JS -->
-  <script src="/static/js/app.js?v=2.2"></script>
+  <script src="/static/js/app.js?v=2.3"></script>
 </body>
 </html>

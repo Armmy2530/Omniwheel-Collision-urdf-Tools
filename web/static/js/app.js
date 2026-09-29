@@ -179,6 +179,9 @@ function localComputeRollerData() {
 
 // Three.js Globals
 let scene, camera, renderer, controls;
+let orthoCamera, perspCamera;
+let isOrthographic = true;
+let frustumSize = 250;
 let wheelGroup, hubMesh, gridHelper, axesHelper;
 let rollerMeshes = [];
 let arrowHelpers = [];
@@ -225,14 +228,35 @@ function initThreeJS() {
   const container = document.getElementById('viewport-container');
   const width = (container && container.clientWidth) ? container.clientWidth : 800;
   const height = (container && container.clientHeight) ? container.clientHeight : 500;
+  const aspect = width / height;
 
   // Scene
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x0f172a);
 
-  // Camera
-  camera = new THREE.PerspectiveCamera(45, width / height, 1, 3000);
-  camera.position.set(160, 140, 200);
+  // Orthographic Camera (Primary CAD-standard parallel projection)
+  frustumSize = Math.max(160, state.wheel_radius_mm * 2.8);
+  orthoCamera = new THREE.OrthographicCamera(
+    -frustumSize * aspect / 2,
+    frustumSize * aspect / 2,
+    frustumSize / 2,
+    -frustumSize / 2,
+    -2000,
+    5000
+  );
+  orthoCamera.position.set(160, 140, 200);
+
+  // Perspective Camera (Optional toggle)
+  perspCamera = new THREE.PerspectiveCamera(45, aspect, 1, 3000);
+  perspCamera.position.set(160, 140, 200);
+
+  // Active Camera
+  camera = isOrthographic ? orthoCamera : perspCamera;
+  window.camera = camera;
+  window.isOrthographic = isOrthographic;
+  window.setCameraMode = setCameraMode;
+  window.setCameraView = setCameraView;
+  window.state = state;
 
   // Renderer
   renderer = new THREE.WebGLRenderer({
@@ -296,11 +320,26 @@ function initThreeJS() {
 
 function onWindowResize() {
   const container = document.getElementById('viewport-container');
-  if (!container || !camera || !renderer) return;
+  if (!container || !renderer) return;
   const width = container.clientWidth || 800;
   const height = container.clientHeight || 500;
-  camera.aspect = width / height;
-  camera.updateProjectionMatrix();
+  const aspect = width / height;
+
+  frustumSize = Math.max(160, state.wheel_radius_mm * 2.8);
+
+  if (orthoCamera) {
+    orthoCamera.left = -frustumSize * aspect / 2;
+    orthoCamera.right = frustumSize * aspect / 2;
+    orthoCamera.top = frustumSize / 2;
+    orthoCamera.bottom = -frustumSize / 2;
+    orthoCamera.updateProjectionMatrix();
+  }
+
+  if (perspCamera) {
+    perspCamera.aspect = aspect;
+    perspCamera.updateProjectionMatrix();
+  }
+
   renderer.setSize(width, height);
 }
 
@@ -739,16 +778,16 @@ function setCameraView(view) {
   const dist = state.wheel_radius_mm * 4;
 
   switch (view) {
-    case 'front': // Looking directly down Y axis at X-Z plane
-      camera.position.set(0, dist, 0.001);
+    case 'front': // Looking directly down Y axis at X-Z plane (wheel face)
+      camera.position.set(0, dist, 0.0001);
       camera.up.set(0, 0, 1);
       break;
-    case 'side': // Looking down X axis at Y-Z plane
-      camera.position.set(dist, 0, 0);
+    case 'side': // Looking down X axis at Y-Z plane (side profile / layer thickness)
+      camera.position.set(dist, 0, 0.0001);
       camera.up.set(0, 0, 1);
       break;
     case 'top': // Looking down Z axis at X-Y plane
-      camera.position.set(0, 0, dist);
+      camera.position.set(0, 0.0001, dist);
       camera.up.set(0, 1, 0);
       break;
     case 'iso':
@@ -759,7 +798,44 @@ function setCameraView(view) {
   }
 
   controls.target.set(0, 0, 0);
+  if (isOrthographic && orthoCamera) {
+    orthoCamera.zoom = 1;
+    orthoCamera.updateProjectionMatrix();
+  }
   controls.update();
+}
+
+function toggleCameraMode() {
+  setCameraMode(!isOrthographic);
+}
+
+function setCameraMode(ortho) {
+  isOrthographic = ortho;
+  const oldPos = camera.position.clone();
+  const oldUp = camera.up.clone();
+  const oldTarget = controls.target.clone();
+
+  camera = isOrthographic ? orthoCamera : perspCamera;
+  window.camera = camera;
+  window.isOrthographic = isOrthographic;
+  camera.position.copy(oldPos);
+  camera.up.copy(oldUp);
+  controls.object = camera;
+  controls.target.copy(oldTarget);
+
+  onWindowResize();
+  controls.update();
+
+  const modeBtn = document.getElementById('cam-mode');
+  if (modeBtn) {
+    modeBtn.textContent = isOrthographic ? 'Ortho' : 'Persp';
+    modeBtn.title = isOrthographic 
+      ? 'Current: Orthographic (CAD parallel view). Click to switch to Perspective' 
+      : 'Current: Perspective (Natural depth view). Click to switch to Orthographic';
+    modeBtn.className = isOrthographic 
+      ? 'px-2 py-0.5 bg-cyan-950 text-cyan-400 border border-cyan-800 rounded font-semibold transition'
+      : 'px-2 py-0.5 hover:bg-slate-800 text-slate-400 rounded transition';
+  }
 }
 
 /* -------------------------------------------------------------
@@ -859,6 +935,10 @@ function initEventListeners() {
   document.getElementById('cam-side').addEventListener('click', () => setCameraView('side'));
   document.getElementById('cam-top').addEventListener('click', () => setCameraView('top'));
   document.getElementById('cam-reset').addEventListener('click', () => setCameraView('iso'));
+  const camModeBtn = document.getElementById('cam-mode');
+  if (camModeBtn) {
+    camModeBtn.addEventListener('click', toggleCameraMode);
+  }
 
   // Preset selector
   document.getElementById('preset-selector').addEventListener('change', (e) => {
