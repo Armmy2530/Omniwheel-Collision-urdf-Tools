@@ -14,7 +14,8 @@ from core.omni_generator import (
     generate_urdf_snippet,
     generate_full_standalone_urdf,
     generate_yaml_string,
-    PRESETS
+    PRESETS,
+    COLLIDER_MODELS
 )
 
 WORKSPACE_ROOT = Path(__file__).resolve().parent.parent
@@ -52,10 +53,11 @@ class LayerModel(BaseModel):
 class ComputeRequest(BaseModel):
     wheel_radius: float = Field(0.050, gt=0, description="Wheel radius in meters")
     tangent_radius: float = Field(0.008, gt=0, description="Roller collision radius in meters")
-    roller_shape: str = Field("sphere", pattern="^(sphere|cylinder)$", description="Roller collision shape")
-    roller_length: Optional[float] = Field(None, gt=0, description="Roller cylinder length in meters")
+    roller_shape: str = Field("o11", description="Roller collision shape / paper model (o11, s6, s4, s8, s10, c7, c4, sphere, cylinder)")
+    collider_type: Optional[str] = Field(None, description="Optional explicit collider type")
+    roller_length: Optional[float] = Field(None, gt=0, description="Roller length in meters")
     roller_weight: float = Field(0.010, gt=0, description="Roller mass in kg")
-    roller_method: str = Field("axis", pattern="^(axis|rotation)$", description="Orientation method")
+    roller_method: str = Field("rotation", pattern="^(axis|rotation)$", description="Orientation method")
     layers: List[LayerModel] = Field(default_factory=list)
     prefix: str = Field("${prefix}", description="URDF prefix parameter")
     wheel_name: str = Field("omni_wheel", description="Standalone wheel name")
@@ -81,6 +83,11 @@ async def serve_index():
 @app.get("/api/presets")
 async def get_presets():
     return JSONResponse(PRESETS)
+
+
+@app.get("/api/collider-models")
+async def get_collider_models():
+    return JSONResponse(COLLIDER_MODELS)
 
 
 @app.get("/api/saved-configs")
@@ -114,11 +121,13 @@ async def load_saved_config(filename: str):
 async def compute(req: ComputeRequest):
     try:
         actual_len = req.roller_length or round(req.tangent_radius * 2.5, 4)
+        chosen_shape = req.collider_type or req.roller_shape or "o11"
         if req.custom_positions and len(req.custom_positions) > 0:
             config = {
                 'wheel_radius': req.wheel_radius,
                 'tangent_radius': req.tangent_radius,
-                'roller_shape': req.roller_shape,
+                'roller_shape': chosen_shape,
+                'collider_type': chosen_shape,
                 'roller_length': actual_len,
                 'roller_weight': req.roller_weight,
                 'roller_count': len(req.custom_positions),
@@ -134,7 +143,7 @@ async def compute(req: ComputeRequest):
                 roller_weight=req.roller_weight,
                 roller_method=req.roller_method,
                 layers=layers_dict,
-                roller_shape=req.roller_shape,
+                roller_shape=chosen_shape,
                 roller_length=actual_len
             )
 
@@ -174,7 +183,7 @@ async def process_parsed_config(config: Dict[str, Any], raw_yaml: str = ""):
     wheel_radius = float(config.get('wheel_radius', 0.05))
     tangent_radius = float(config.get('tangent_radius', 0.008))
     roller_weight = float(config.get('roller_weight', 0.01))
-    roller_method = config.get('roller_method', 'axis')
+    roller_method = config.get('roller_method', 'rotation')
     positions = config.get('position', [])
 
     # Infer layers from offset values

@@ -6,10 +6,10 @@
 const state = {
   wheel_radius_mm: 50.0,
   tangent_radius_mm: 8.0,
-  roller_shape: 'sphere',
-  roller_length_mm: 15.0,
+  roller_shape: 'o11',
+  roller_length_mm: 18.0,
   roller_weight_kg: 0.012,
-  roller_method: 'axis',
+  roller_method: 'rotation',
   prefix: '${prefix}',
   wheel_name: 'omni_wheel',
   layers: [
@@ -40,15 +40,80 @@ const LAYER_COLORS = [
 
 // Built-in Default Presets (Available instantly even offline)
 const DEFAULT_PRESETS = {
+  "paper_model_o": {
+    "name": "Paper Model O (11-Sphere Optimized, 100mm)",
+    "description": "ICRA 2024 Model O with 11 overlapping spheres and central sphere for smoothest contact and minimum drift.",
+    "wheel_radius": 0.050,
+    "tangent_radius": 0.008,
+    "collider_type": "o11",
+    "roller_shape": "o11",
+    "roller_length": 0.018,
+    "roller_weight": 0.012,
+    "roller_method": "rotation",
+    "global_rollers_per_layer": 8,
+    "layers": [
+      {"offset": -0.009, "angle": 0.0, "rollers": 8},
+      {"offset": 0.009, "angle": 22.5, "rollers": 8}
+    ]
+  },
+  "paper_model_s6": {
+    "name": "Paper Model S6 (6-Sphere Notch, 100mm)",
+    "description": "ICRA 2024 Model S6 (3 spheres/side, bearing notch gap). Best balance between drift and simulation real-time factor.",
+    "wheel_radius": 0.050,
+    "tangent_radius": 0.008,
+    "collider_type": "s6",
+    "roller_shape": "s6",
+    "roller_length": 0.018,
+    "roller_weight": 0.012,
+    "roller_method": "rotation",
+    "global_rollers_per_layer": 8,
+    "layers": [
+      {"offset": -0.009, "angle": 0.0, "rollers": 8},
+      {"offset": 0.009, "angle": 22.5, "rollers": 8}
+    ]
+  },
+  "paper_model_c7": {
+    "name": "Paper Model C7 (7-Cylinder Barrel, 100mm)",
+    "description": "ICRA 2024 Model C7 with 7 concentric cylinders matching roller curvature.",
+    "wheel_radius": 0.050,
+    "tangent_radius": 0.008,
+    "collider_type": "c7",
+    "roller_shape": "c7",
+    "roller_length": 0.018,
+    "roller_weight": 0.012,
+    "roller_method": "rotation",
+    "global_rollers_per_layer": 8,
+    "layers": [
+      {"offset": -0.009, "angle": 0.0, "rollers": 8},
+      {"offset": 0.009, "angle": 22.5, "rollers": 8}
+    ]
+  },
+  "paper_model_c4": {
+    "name": "Paper Model C4 (4-Cylinder Notch, 100mm)",
+    "description": "ICRA 2024 Model C4 with 4 cylinders and center gap for roller bearing notch.",
+    "wheel_radius": 0.050,
+    "tangent_radius": 0.008,
+    "collider_type": "c4",
+    "roller_shape": "c4",
+    "roller_length": 0.018,
+    "roller_weight": 0.012,
+    "roller_method": "rotation",
+    "global_rollers_per_layer": 8,
+    "layers": [
+      {"offset": -0.009, "angle": 0.0, "rollers": 8},
+      {"offset": 0.009, "angle": 22.5, "rollers": 8}
+    ]
+  },
   "standard_dual_layer": {
     "name": "Standard Dual-Layer (100mm, 2x8 rollers)",
     "description": "Standard 100mm omni wheel with 2 offset layers of 8 rollers each (total 16).",
     "wheel_radius": 0.050,
     "tangent_radius": 0.008,
-    "roller_shape": "sphere",
-    "roller_length": 0.015,
+    "collider_type": "o11",
+    "roller_shape": "o11",
+    "roller_length": 0.016,
     "roller_weight": 0.012,
-    "roller_method": "axis",
+    "roller_method": "rotation",
     "global_rollers_per_layer": 8,
     "layers": [
       {"offset": -0.009, "angle": 0.0, "rollers": 8},
@@ -60,29 +125,15 @@ const DEFAULT_PRESETS = {
     "description": "Smooth rolling dual-layer omni with 12 rollers per layer (24 total).",
     "wheel_radius": 0.06175,
     "tangent_radius": 0.006,
-    "roller_shape": "sphere",
+    "collider_type": "s6",
+    "roller_shape": "s6",
     "roller_length": 0.015,
     "roller_weight": 0.010,
-    "roller_method": "axis",
+    "roller_method": "rotation",
     "global_rollers_per_layer": 12,
     "layers": [
       {"offset": -0.012, "angle": 0.0, "rollers": 12},
       {"offset": 0.012, "angle": 15.0, "rollers": 12}
-    ]
-  },
-  "cylinder_dual_layer": {
-    "name": "Cylinder Roller Omni (100mm, 2x8 barrels)",
-    "description": "Dual-layer omni wheel with cylindrical barrel rollers.",
-    "wheel_radius": 0.050,
-    "tangent_radius": 0.008,
-    "roller_shape": "cylinder",
-    "roller_length": 0.018,
-    "roller_weight": 0.015,
-    "roller_method": "axis",
-    "global_rollers_per_layer": 8,
-    "layers": [
-      {"offset": -0.010, "angle": 0.0, "rollers": 8},
-      {"offset": 0.010, "angle": 22.5, "rollers": 8}
     ]
   },
   "triple_layer_heavy": {
@@ -90,10 +141,11 @@ const DEFAULT_PRESETS = {
     "description": "3 staggered layers for maximum ground contact and load distribution.",
     "wheel_radius": 0.075,
     "tangent_radius": 0.010,
-    "roller_shape": "sphere",
+    "collider_type": "o11",
+    "roller_shape": "o11",
     "roller_length": 0.020,
     "roller_weight": 0.025,
-    "roller_method": "axis",
+    "roller_method": "rotation",
     "global_rollers_per_layer": 6,
     "layers": [
       {"offset": -0.016, "angle": 0.0, "rollers": 6},
@@ -106,14 +158,30 @@ const DEFAULT_PRESETS = {
     "description": "Configuration matching example.yaml in repo (8 rollers across 2 layers).",
     "wheel_radius": 0.035,
     "tangent_radius": 0.020,
+    "collider_type": "sphere",
     "roller_shape": "sphere",
     "roller_length": 0.020,
     "roller_weight": 0.015,
-    "roller_method": "axis",
+    "roller_method": "rotation",
     "global_rollers_per_layer": 4,
     "layers": [
       {"offset": 0.004625, "angle": 0.0, "rollers": 4},
       {"offset": 0.013875, "angle": 45.0, "rollers": 4}
+    ]
+  },
+  "single_layer": {
+    "name": "Single Layer (80mm, 10 rollers)",
+    "description": "Single-layer omni wheel with 10 rollers centered at Y=0.",
+    "wheel_radius": 0.040,
+    "tangent_radius": 0.007,
+    "collider_type": "c7",
+    "roller_shape": "c7",
+    "roller_length": 0.0175,
+    "roller_weight": 0.008,
+    "roller_method": "rotation",
+    "global_rollers_per_layer": 10,
+    "layers": [
+      {"offset": 0.0, "angle": 0.0, "rollers": 10}
     ]
   }
 };
@@ -132,10 +200,87 @@ function populatePresetsDropdown(presets) {
   }
 }
 
+function getColliderSubelementsJS(colliderType, wheelRadiusMm, tangentRadiusMm, rollerLengthMm) {
+  const R = wheelRadiusMm;
+  const r0 = tangentRadiusMm;
+  const L = rollerLengthMm;
+  const ctype = (colliderType || 'o11').toLowerCase().trim();
+
+  function rProfile(u) {
+    const val = R * R - u * u;
+    if (val > 0) {
+      return Math.max(0.25 * r0, Math.sqrt(val) - (R - r0));
+    }
+    return r0 * 0.5;
+  }
+
+  const subs = [];
+
+  if (ctype === '7c' || ctype === 'c7') {
+    const n = 7;
+    const h = L / n;
+    for (let i = 0; i < n; i++) {
+      const u = -L / 2.0 + (i + 0.5) * h;
+      subs.push({ type: 'cylinder', u_mm: u, radius_mm: rProfile(u), length_mm: h });
+    }
+  } else if (ctype === '4c' || ctype === 'c4') {
+    const n_half = 2;
+    const gap = 0.20 * L;
+    const L_half = (L - gap) / 2.0;
+    const h = L_half / n_half;
+    for (let i = 0; i < n_half; i++) {
+      const u = -(gap / 2.0 + (i + 0.5) * h);
+      subs.push({ type: 'cylinder', u_mm: u, radius_mm: rProfile(u), length_mm: h });
+    }
+    for (let i = 0; i < n_half; i++) {
+      const u = gap / 2.0 + (i + 0.5) * h;
+      subs.push({ type: 'cylinder', u_mm: u, radius_mm: rProfile(u), length_mm: h });
+    }
+  } else if (/^s\d+$/i.test(ctype) || /^\d+s$/i.test(ctype)) {
+    const nSpheres = parseInt(ctype.replace(/\D/g, '')) || 6;
+    const k = Math.floor(nSpheres / 2);
+    const gap = 0.18 * L;
+    const L_half = (L - gap) / 2.0;
+    for (let i = 0; i < k; i++) {
+      const u_mag = gap / 2.0 + ((i + 0.5) / k) * L_half;
+      subs.push({ type: 'sphere', u_mm: -u_mag, radius_mm: rProfile(-u_mag) });
+      subs.push({ type: 'sphere', u_mm: u_mag, radius_mm: rProfile(u_mag) });
+    }
+  } else if (ctype === 'o' || ctype === 'o11' || ctype === '11s') {
+    const nSpheres = 11;
+    const k = Math.floor((nSpheres - 1) / 2);
+    subs.push({ type: 'sphere', u_mm: 0.0, radius_mm: rProfile(0.0) });
+    for (let j = 1; j <= k; j++) {
+      const u = (j / (k + 0.5)) * (L / 2.0);
+      subs.push({ type: 'sphere', u_mm: -u, radius_mm: rProfile(-u) });
+      subs.push({ type: 'sphere', u_mm: u, radius_mm: rProfile(u) });
+    }
+  } else if (ctype === 'cylinder') {
+    subs.push({ type: 'cylinder', u_mm: 0.0, radius_mm: r0, length_mm: L });
+  } else {
+    subs.push({ type: 'sphere', u_mm: 0.0, radius_mm: r0 });
+  }
+
+  subs.sort((a, b) => a.u_mm - b.u_mm);
+  return subs;
+}
+
 function localComputeRollerData() {
   const amp = (state.wheel_radius_mm - state.tangent_radius_mm) / 1000.0;
   const roller_data = [];
   let id = 1;
+
+  const sampleSubs = getColliderSubelementsJS(
+    state.roller_shape,
+    state.wheel_radius_mm,
+    state.tangent_radius_mm,
+    state.roller_length_mm
+  ).map(s => ({
+    type: s.type,
+    u: s.u_mm / 1000.0,
+    radius: s.radius_mm / 1000.0,
+    length: (s.length_mm || 0) / 1000.0
+  }));
 
   state.layers.forEach((layer, l_idx) => {
     const offset = layer.offset_mm / 1000.0;
@@ -160,7 +305,8 @@ function localComputeRollerData() {
         cylinder_rpy: cylinder_rpy,
         axis: axis,
         world_axis: world_axis,
-        layer: l_idx
+        layer: l_idx,
+        subelements: sampleSubs
       });
     }
   });
@@ -421,21 +567,20 @@ function updateThreeScene(data) {
     wheelGroup.add(boreMesh);
   }
 
-  // 2. Rollers (Sphere or Cylinder)
-  const isCylinder = state.roller_shape === 'cylinder';
-  const rollerLen = state.roller_length_mm;
-
-  const sphereGeom = new THREE.SphereGeometry(tangentRadiusMm, 24, 20);
-  const wireSphereGeom = new THREE.SphereGeometry(tangentRadiusMm * 1.01, 12, 10);
-
-  const cylinderGeom = isCylinder ? new THREE.CylinderGeometry(tangentRadiusMm, tangentRadiusMm, rollerLen, 24) : null;
-  const wireCylinderGeom = isCylinder ? new THREE.CylinderGeometry(tangentRadiusMm * 1.01, tangentRadiusMm * 1.01, rollerLen * 1.01, 16) : null;
+  // 2. Rollers with Compound Sub-colliders (Paper models C, S, O or basic)
+  const defaultSubs = getColliderSubelementsJS(
+    state.roller_shape,
+    state.wheel_radius_mm,
+    state.tangent_radius_mm,
+    state.roller_length_mm
+  );
 
   data.roller_data.forEach(r => {
     // Note: positions are in meters in backend, convert to mm for Three.js
     const posX = r.position[0] * 1000;
     const posY = r.position[1] * 1000;
     const posZ = r.position[2] * 1000;
+    const rollerCenter = new THREE.Vector3(posX, posY, posZ);
 
     const layerIdx = r.layer || 0;
     const colorHex = LAYER_COLORS[layerIdx % LAYER_COLORS.length];
@@ -443,54 +588,76 @@ function updateThreeScene(data) {
     const spinVector = r.world_axis || r.axis;
     const dir = new THREE.Vector3(spinVector[0], spinVector[1], spinVector[2]).normalize();
 
-    // Solid roller mesh
+    // Solid roller material
     const rollerMat = new THREE.MeshStandardMaterial({
       color: colorHex,
-      roughness: 0.3,
+      roughness: 0.35,
       metalness: 0.4
     });
 
-    const geomToUse = isCylinder ? cylinderGeom : sphereGeom;
-    const roller = new THREE.Mesh(geomToUse, rollerMat);
-    roller.position.set(posX, posY, posZ);
+    const wireMat = new THREE.MeshBasicMaterial({
+      color: 0xffffff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.3
+    });
 
-    if (isCylinder) {
-      // Cylinder is along Y (0,1,0) by default in Three.js, orient along spin vector
-      roller.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-    }
+    const subsToRender = (r.subelements && r.subelements.length > 0)
+      ? r.subelements.map(s => ({
+          type: s.type,
+          u_mm: s.u * 1000,
+          radius_mm: s.radius * 1000,
+          length_mm: s.length ? s.length * 1000 : 0
+        }))
+      : defaultSubs;
 
-    roller.userData = { rollerData: r };
-    wheelGroup.add(roller);
-    rollerMeshes.push(roller);
+    subsToRender.forEach(sub => {
+      const subPos = rollerCenter.clone().addScaledVector(dir, sub.u_mm);
+      let mesh, wireMesh;
 
-    // Collision Wireframe
-    if (state.display.showWireframe) {
-      const wireGeomToUse = isCylinder ? wireCylinderGeom : wireSphereGeom;
-      const wireMat = new THREE.MeshBasicMaterial({
-        color: 0xffffff,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.25
-      });
-      const wireMesh = new THREE.Mesh(wireGeomToUse, wireMat);
-      wireMesh.position.set(posX, posY, posZ);
-      if (isCylinder) {
-        wireMesh.quaternion.copy(roller.quaternion);
+      if (sub.type === 'cylinder') {
+        const geom = new THREE.CylinderGeometry(sub.radius_mm, sub.radius_mm, sub.length_mm, 20);
+        mesh = new THREE.Mesh(geom, rollerMat);
+        mesh.position.copy(subPos);
+        mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+
+        if (state.display.showWireframe) {
+          const wGeom = new THREE.CylinderGeometry(sub.radius_mm * 1.01, sub.radius_mm * 1.01, sub.length_mm * 1.01, 12);
+          wireMesh = new THREE.Mesh(wGeom, wireMat);
+          wireMesh.position.copy(subPos);
+          wireMesh.quaternion.copy(mesh.quaternion);
+        }
+      } else {
+        const geom = new THREE.SphereGeometry(sub.radius_mm, 18, 14);
+        mesh = new THREE.Mesh(geom, rollerMat);
+        mesh.position.copy(subPos);
+
+        if (state.display.showWireframe) {
+          const wGeom = new THREE.SphereGeometry(sub.radius_mm * 1.01, 10, 8);
+          wireMesh = new THREE.Mesh(wGeom, wireMat);
+          wireMesh.position.copy(subPos);
+        }
       }
-      wheelGroup.add(wireMesh);
-    }
+
+      mesh.userData = { rollerData: r, subelement: sub };
+      wheelGroup.add(mesh);
+      rollerMeshes.push(mesh);
+
+      if (wireMesh) {
+        wheelGroup.add(wireMesh);
+      }
+    });
 
     // Rotation Axis Arrow (uses true physical spin axis in 3D world space)
     if (state.display.showArrows && spinVector) {
-      const origin = new THREE.Vector3(posX, posY, posZ);
       const arrowLength = tangentRadiusMm * 2.2;
-      const arrowHelper = new THREE.ArrowHelper(dir, origin, arrowLength, 0xef4444, tangentRadiusMm * 0.7, tangentRadiusMm * 0.4);
+      const arrowHelper = new THREE.ArrowHelper(dir, rollerCenter, arrowLength, 0xef4444, tangentRadiusMm * 0.7, tangentRadiusMm * 0.4);
       wheelGroup.add(arrowHelper);
       arrowHelpers.push(arrowHelper);
 
       // Add reverse arrow head to show bi-directional rotation axis
       const revDir = dir.clone().negate();
-      const revArrow = new THREE.ArrowHelper(revDir, origin, arrowLength, 0xef4444, tangentRadiusMm * 0.7, tangentRadiusMm * 0.4);
+      const revArrow = new THREE.ArrowHelper(revDir, rollerCenter, arrowLength, 0xef4444, tangentRadiusMm * 0.7, tangentRadiusMm * 0.4);
       wheelGroup.add(revArrow);
       arrowHelpers.push(revArrow);
     }
@@ -523,6 +690,7 @@ function onMouseMove(event) {
       tooltip.style.top = `${event.clientY - rect.top + 15}px`;
       tooltip.innerHTML = `
         <div class="font-bold text-cyan-400">Roller #${rData.id} (Layer ${rData.layer + 1})</div>
+        <div>Model: <span class="text-cyan-300 font-semibold">${(state.roller_shape || 'o11').toUpperCase()}</span> (${rData.subelements ? rData.subelements.length : 1} colliders)</div>
         <div>Theta: <span class="text-white">${rData.theta_deg.toFixed(1)}°</span></div>
         <div>Pos (mm): <span class="text-white">[${(rData.position[0]*1000).toFixed(1)}, ${(rData.position[1]*1000).toFixed(1)}, ${(rData.position[2]*1000).toFixed(1)}]</span></div>
         <div>Spin Axis: <span class="text-white">[${(rData.world_axis || rData.axis).map(v => v.toFixed(3)).join(', ')}]</span></div>
@@ -591,6 +759,7 @@ async function performCompute() {
     wheel_radius: state.wheel_radius_mm / 1000.0,
     tangent_radius: state.tangent_radius_mm / 1000.0,
     roller_shape: state.roller_shape,
+    collider_type: state.roller_shape,
     roller_length: state.roller_length_mm / 1000.0,
     roller_weight: state.roller_weight_kg,
     roller_method: state.roller_method,
@@ -873,11 +1042,11 @@ function initEventListeners() {
 
   rollerShapeSelect.addEventListener('change', (e) => {
     state.roller_shape = e.target.value;
-    if (state.roller_shape === 'cylinder') {
+    if (state.roller_shape === 'sphere') {
+      rollerLengthContainer.style.opacity = '0.5';
+    } else {
       rollerLengthContainer.style.opacity = '1';
       rollerLengthContainer.style.pointerEvents = 'auto';
-    } else {
-      rollerLengthContainer.style.opacity = '0.5';
     }
     triggerCompute();
   });
@@ -984,7 +1153,7 @@ function loadPreset(key) {
 
   state.wheel_radius_mm = p.wheel_radius * 1000;
   state.tangent_radius_mm = p.tangent_radius * 1000;
-  state.roller_shape = p.roller_shape || 'sphere';
+  state.roller_shape = p.collider_type || p.roller_shape || 'o11';
   state.roller_length_mm = (p.roller_length || (p.tangent_radius * 2.5)) * 1000;
   state.roller_weight_kg = p.roller_weight;
   state.roller_method = p.roller_method;
@@ -995,6 +1164,11 @@ function loadPreset(key) {
   document.getElementById('roller-length').value = state.roller_length_mm;
   document.getElementById('roller-weight').value = state.roller_weight_kg;
   document.getElementById('roller-method').value = state.roller_method;
+
+  const rlenContainer = document.getElementById('roller-length-container');
+  if (rlenContainer) {
+    rlenContainer.style.opacity = (state.roller_shape === 'sphere') ? '0.5' : '1';
+  }
 
   state.layers = p.layers.map(l => ({
     offset_mm: l.offset * 1000,

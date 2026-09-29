@@ -34,7 +34,8 @@ def cmd_gui(args):
 
 def cmd_create_urdf(args):
     """Generate URDF/Xacro from YAML configuration."""
-    input_path = Path(args.config) if args.config else None
+    cfg_file = args.config_opt or args.config
+    input_path = Path(cfg_file) if cfg_file else None
     if not input_path:
         if DEFAULT_CONFIG.exists():
             input_path = DEFAULT_CONFIG
@@ -73,6 +74,8 @@ def cmd_gen_yaml(args):
         config = calculate_roller_positions_from_layers(
             wheel_radius=p["wheel_radius"],
             tangent_radius=p["tangent_radius"],
+            roller_shape=p.get("roller_shape", "sphere"),
+            roller_length=p.get("roller_length"),
             roller_weight=p["roller_weight"],
             roller_method=p["roller_method"],
             layers=p["layers"]
@@ -113,6 +116,7 @@ def main():
     # Create URDF Command
     urdf_parser = subparsers.add_parser("create-urdf", help="Generate collision URDF/Xacro from YAML")
     urdf_parser.add_argument("config", nargs="?", default=None, help="Input YAML file path")
+    urdf_parser.add_argument("-c", "--config-file", dest="config_opt", default=None, help="Input YAML file path (alternative)")
     urdf_parser.add_argument("-o", "--output", default="output.txt", help="Output file path (default: output.txt)")
     urdf_parser.add_argument("--prefix", default="${prefix}", help="Xacro prefix parameter")
     urdf_parser.add_argument("--wheel-name", default="omni_wheel", help="Wheel link name")
@@ -123,11 +127,10 @@ def main():
     yaml_parser.add_argument("-o", "--output", default="wheel_config/omni_wheel_config.yml", help="Output YAML file path")
     yaml_parser.add_argument("--preset", choices=list(PRESETS.keys()), default=None, help="Use a built-in preset")
     yaml_parser.add_argument("--wheel-radius", type=float, default=0.06175, help="Wheel base radius (m)")
-    yaml_parser.add_argument("--tangent-radius", type=float, default=0.006, help="Roller collision radius (m)")
-    yaml_parser.add_argument("--roller-shape", choices=["sphere", "cylinder"], default="sphere", help="Collision shape (sphere or cylinder)")
-    yaml_parser.add_argument("--roller-length", type=float, default=None, help="Roller length in meters (for cylinder)")
+    yaml_parser.add_argument("--roller-shape", choices=["o11", "s6", "s4", "s8", "s10", "c7", "c4", "sphere", "cylinder"], default="o11", help="Collider model (Paper: o11, s6, s4, s8, s10, c7, c4; Basic: sphere, cylinder)")
+    yaml_parser.add_argument("--roller-length", type=float, default=None, help="Roller length in meters (default: tangent_radius * 2.5)")
     yaml_parser.add_argument("--roller-weight", type=float, default=0.010, help="Roller mass (kg)")
-    yaml_parser.add_argument("--roller-method", choices=["axis", "rotation"], default="axis", help="Orientation method")
+    yaml_parser.add_argument("--roller-method", choices=["rotation", "axis"], default="rotation", help="Orientation method (default: rotation)")
     yaml_parser.add_argument("--rollers-per-layer", type=int, default=12, help="Number of rollers per layer")
 
     args = parser.parse_args()

@@ -99,16 +99,27 @@
             <div>
               <label class="text-slate-400 block mb-1">Roller Method</label>
               <select id="roller-method" class="input-number-compact">
-                <option value="axis">axis (URDF axis)</option>
-                <option value="rotation">rotation (Pitch)</option>
+                <option value="rotation" selected>rotation (Clean Macro - Recommended)</option>
+                <option value="axis">axis (Legacy axis)</option>
               </select>
             </div>
 
             <div>
-              <label class="text-slate-400 block mb-1">Collision Shape</label>
+              <label class="text-slate-400 block mb-1">Collider Model</label>
               <select id="roller-shape" class="input-number-compact font-semibold text-cyan-300">
-                <option value="sphere">Sphere (Ball)</option>
-                <option value="cylinder">Cylinder (Barrel)</option>
+                <optgroup label="Paper Models (ICRA 2024)">
+                  <option value="o11" selected>Model O - 11 Spheres (Smoothest)</option>
+                  <option value="s6">Model S6 - 6 Spheres (Recommended)</option>
+                  <option value="s4">Model S4 - 4 Spheres (Gap)</option>
+                  <option value="s8">Model S8 - 8 Spheres (Gap)</option>
+                  <option value="s10">Model S10 - 10 Spheres (Gap)</option>
+                  <option value="c7">Model C7 - 7 Cylinders (Barrel)</option>
+                  <option value="c4">Model C4 - 4 Cylinders (Gap)</option>
+                </optgroup>
+                <optgroup label="Basic Models">
+                  <option value="sphere">Single Sphere (1S)</option>
+                  <option value="cylinder">Single Cylinder (1C)</option>
+                </optgroup>
               </select>
             </div>
 
@@ -213,7 +224,7 @@
             <span id="hud-hub-dia" class="font-bold text-white font-mono">0 mm</span>
           </div>
           <div class="flex justify-between gap-4 text-slate-300">
-            <span>Roller Sphere:</span>
+            <span>Roller Dia:</span>
             <span id="hud-roller-dia" class="font-bold text-white font-mono">0 mm</span>
           </div>
           <div class="flex justify-between gap-4 text-slate-300">
@@ -310,6 +321,6 @@
   </div>
 
   <!-- Custom App JS -->
-  <script src="/static/js/app.js?v=2.3"></script>
+  <script src="/static/js/app.js?v=2.5"></script>
 </body>
 </html>
