@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Omniwheel Collision URDF Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Three.js and OrbitControls -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-slate-950 text-slate-100 flex flex-col h-screen overflow-hidden select-none">
+
+  <!-- Top Header Navigation -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-2.5 flex items-center justify-between z-20 shrink-0">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-cyan-600 flex items-center justify-center font-black text-white text-base shadow-lg shadow-cyan-500/20">
+        ⚙
+      </div>
+      <div>
+        <h1 class="text-sm font-bold tracking-wide text-white flex items-center gap-2">
+          Omniwheel Collision URDF Studio
+          <span class="text-[10px] uppercase font-semibold bg-cyan-950 text-cyan-400 px-1.5 py-0.5 rounded border border-cyan-800">Web GUI</span>
+        </h1>
+        <p class="text-xs text-slate-400">Interactive 3D Visualizer & URDF / XACRO Generator</p>
+      </div>
+    </div>
+
+    <!-- Top Action Bar -->
+    <div class="flex items-center space-x-2">
+      <!-- Preset Dropdown -->
+      <select id="preset-selector" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500">
+        <option value="">-- Presets --</option>
+      </select>
+
+      <!-- Saved Configs Dropdown -->
+      <select id="saved-config-selector" class="bg-slate-800 border border-slate-700 text-xs rounded-lg px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-cyan-500">
+        <option value="">-- Load Config --</option>
+      </select>
+
+      <!-- Import / Upload YAML -->
+      <label class="cursor-pointer bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-200 px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition">
+        <span>📂 Open YAML</span>
+        <input type="file" id="yaml-file-input" accept=".yaml,.yml" class="hidden">
+      </label>
+
+      <!-- Save to Server -->
+      <button id="btn-save-server" class="bg-cyan-600 hover:bg-cyan-500 text-xs font-medium text-white px-3.5 py-1.5 rounded-lg flex items-center gap-1.5 shadow transition shadow-cyan-900/30">
+        💾 Save to Server
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Workspace Layout -->
+  <div class="flex flex-1 overflow-hidden relative">
+
+    <!-- Left Configuration Panel -->
+    <aside class="w-80 md:w-96 bg-slate-900/95 border-r border-slate-800 flex flex-col z-10 shrink-0">
+      <div class="overflow-y-auto flex-1 p-4 space-y-4">
+
+        <!-- 1. Wheel Base Geometry -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Wheel Parameters</span>
+            <span class="text-[10px] text-slate-400 bg-slate-800 px-1.5 py-0.5 rounded">SI (mm & kg)</span>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div>
+              <label class="text-slate-400 block mb-1">Wheel Radius</label>
+              <div class="relative">
+                <input type="number" id="wheel-radius" step="0.5" min="5" max="500" class="input-number-compact pr-8">
+                <span class="absolute right-2 top-1 text-slate-500 text-xs">mm</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-slate-400 block mb-1">Roller Radius</label>
+              <div class="relative">
+                <input type="number" id="tangent-radius" step="0.5" min="1" max="100" class="input-number-compact pr-8">
+                <span class="absolute right-2 top-1 text-slate-500 text-xs">mm</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-slate-400 block mb-1">Roller Mass</label>
+              <div class="relative">
+                <input type="number" id="roller-weight" step="0.001" min="0.001" max="10" class="input-number-compact pr-8">
+                <span class="absolute right-2 top-1 text-slate-500 text-xs">kg</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-slate-400 block mb-1">Roller Method</label>
+              <select id="roller-method" class="input-number-compact">
+                <option value="axis">axis (URDF axis)</option>
+                <option value="rotation">rotation (Pitch)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-slate-400 block text-xs mb-1">URDF Prefix</label>
+            <input type="text" id="urdf-prefix" class="input-number-compact font-mono text-xs">
+          </div>
+        </div>
+
+        <!-- 2. Roller Layers Configuration -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-cyan-400">Roller Layers</span>
+            <button id="add-layer-btn" class="bg-cyan-600/20 hover:bg-cyan-600/30 text-cyan-400 text-xs px-2 py-1 rounded border border-cyan-500/30 transition flex items-center gap-1">
+              <span>+ Add Layer</span>
+            </button>
+          </div>
+
+          <!-- Dynamic Layer List -->
+          <div id="layers-container" class="space-y-2">
+            <!-- Injected by JavaScript -->
+          </div>
+        </div>
+
+        <!-- 3. Visualization Display Settings -->
+        <div class="bg-slate-800/60 border border-slate-700/60 rounded-xl p-3.5 space-y-2.5 text-xs">
+          <span class="text-xs font-bold uppercase tracking-wider text-cyan-400 block">3D Display Toggles</span>
+          <div class="grid grid-cols-2 gap-2 text-slate-300">
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
+              <input type="checkbox" id="toggle-hub" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+              <span>Wheel Hub</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
+              <input type="checkbox" id="toggle-wireframe" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+              <span>Collision Wire</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
+              <input type="checkbox" id="toggle-arrows" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+              <span>Rotation Axes</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
+              <input type="checkbox" id="toggle-grid" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+              <span>Ground Grid</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
+              <input type="checkbox" id="toggle-axes" checked class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+              <span>XYZ Axes</span>
+            </label>
+            <label class="flex items-center space-x-2 cursor-pointer hover:text-white">
+              <input type="checkbox" id="toggle-autorotate" class="rounded bg-slate-900 border-slate-700 text-cyan-500 focus:ring-0">
+              <span>Auto Rotate</span>
+            </label>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <!-- Center 3D Viewport & Output Area -->
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+
+      <!-- 3D Canvas Container -->
+      <div id="viewport-container" class="flex-1 relative">
+        <canvas id="three-canvas"></canvas>
+
+        <!-- Floating 3D Hover Tooltip -->
+        <div id="roller-tooltip"></div>
+
+        <!-- Camera Preset Overlay Toolbar -->
+        <div class="absolute top-3 left-3 flex items-center bg-slate-900/80 backdrop-blur border border-slate-700/80 rounded-lg p-1 space-x-1 shadow-lg z-10 text-xs">
+          <button id="cam-iso" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Perspective (Isometric)">3D</button>
+          <button id="cam-front" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Front View (X-Z plane facing Y)">Front (XZ)</button>
+          <button id="cam-side" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Side View (Y-Z plane)">Side (YZ)</button>
+          <button id="cam-top" class="px-2.5 py-1 hover:bg-slate-800 text-slate-300 hover:text-white rounded transition" title="Top View (X-Y plane)">Top (XY)</button>
+          <button id="cam-reset" class="px-2.5 py-1 hover:bg-slate-800 text-cyan-400 rounded transition" title="Reset View">Reset</button>
+        </div>
+
+        <!-- Dimensions & Status HUD -->
+        <div class="absolute top-3 right-3 bg-slate-900/85 backdrop-blur border border-slate-700/80 rounded-lg px-3 py-2 text-xs space-y-1 shadow-lg z-10 pointer-events-none">
+          <div class="text-[11px] font-bold uppercase text-slate-400 tracking-wider">Metrics Overview</div>
+          <div class="flex justify-between gap-4 text-slate-300">
+            <span>Total Rollers:</span>
+            <span id="hud-total-rollers" class="font-bold text-cyan-400 font-mono">0</span>
+          </div>
+          <div class="flex justify-between gap-4 text-slate-300">
+            <span>Outer Diameter:</span>
+            <span id="hud-outer-dia" class="font-bold text-white font-mono">0 mm</span>
+          </div>
+          <div class="flex justify-between gap-4 text-slate-300">
+            <span>Hub Diameter:</span>
+            <span id="hud-hub-dia" class="font-bold text-white font-mono">0 mm</span>
+          </div>
+          <div class="flex justify-between gap-4 text-slate-300">
+            <span>Roller Sphere:</span>
+            <span id="hud-roller-dia" class="font-bold text-white font-mono">0 mm</span>
+          </div>
+          <div class="flex justify-between gap-4 text-slate-300">
+            <span>Total Rollers Mass:</span>
+            <span id="hud-total-mass" class="font-bold text-emerald-400 font-mono">0 g</span>
+          </div>
+        </div>
+
+        <!-- Axis Orientation Hint -->
+        <div class="absolute bottom-3 left-3 text-[11px] text-slate-400 bg-slate-900/75 backdrop-blur px-2.5 py-1 rounded border border-slate-800 pointer-events-none">
+          <span class="text-rose-400 font-bold">X:</span> Red &nbsp;|&nbsp;
+          <span class="text-emerald-400 font-bold">Y:</span> Green (Wheel Face) &nbsp;|&nbsp;
+          <span class="text-blue-400 font-bold">Z:</span> Blue
+        </div>
+      </div>
+
+      <!-- Bottom Panel (Tabs for Code / URDF / Table) -->
+      <section class="h-64 bg-slate-900 border-t border-slate-800 flex flex-col z-10 shrink-0">
+        <!-- Tab Navigation Bar -->
+        <div class="flex items-center justify-between px-3 border-b border-slate-800 bg-slate-900/90 text-xs">
+          <div class="flex space-x-1">
+            <button onclick="switchTab('snippet')" data-tab="snippet" class="tab-btn px-3 py-2 border-b-2 border-cyan-400 text-cyan-400 font-medium transition">
+              URDF / Xacro Macro
+            </button>
+            <button onclick="switchTab('full')" data-tab="full" class="tab-btn px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+              Standalone URDF
+            </button>
+            <button onclick="switchTab('yaml')" data-tab="yaml" class="tab-btn px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+              YAML Config
+            </button>
+            <button onclick="switchTab('table')" data-tab="table" class="tab-btn px-3 py-2 border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">
+              Roller Inspection Table
+            </button>
+          </div>
+
+          <!-- Tab Action Buttons -->
+          <div class="flex items-center space-x-2 py-1">
+            <div id="tab-actions-snippet" class="flex space-x-2">
+              <button id="btn-copy-urdf" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs transition">Copy Xacro</button>
+              <button id="btn-download-urdf" class="bg-cyan-700 hover:bg-cyan-600 text-white px-2.5 py-1 rounded text-xs transition">Download .xacro</button>
+            </div>
+            <div id="tab-actions-yaml" class="flex space-x-2">
+              <button id="btn-copy-yaml" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs transition">Copy YAML</button>
+              <button id="btn-download-yaml" class="bg-cyan-700 hover:bg-cyan-600 text-white px-2.5 py-1 rounded text-xs transition">Download .yml</button>
+            </div>
+            <div id="tab-actions-table" class="flex space-x-2">
+              <button id="btn-export-csv" class="bg-slate-800 hover:bg-slate-700 text-slate-200 px-2.5 py-1 rounded text-xs transition">Export CSV</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab Contents -->
+        <div class="flex-1 overflow-hidden relative">
+
+          <!-- Pane 1: URDF Macro Snippet -->
+          <div id="tab-snippet" class="tab-pane h-full p-2">
+            <textarea id="urdf-snippet-output" readonly class="w-full h-full bg-slate-950 text-slate-200 p-2.5 rounded border border-slate-800 code-block resize-none focus:outline-none"></textarea>
+          </div>
+
+          <!-- Pane 2: Full Standalone URDF -->
+          <div id="tab-full" class="tab-pane hidden h-full p-2">
+            <textarea id="full-urdf-output" readonly class="w-full h-full bg-slate-950 text-slate-200 p-2.5 rounded border border-slate-800 code-block resize-none focus:outline-none"></textarea>
+          </div>
+
+          <!-- Pane 3: YAML Config -->
+          <div id="tab-yaml" class="tab-pane hidden h-full p-2">
+            <textarea id="yaml-output" readonly class="w-full h-full bg-slate-950 text-slate-200 p-2.5 rounded border border-slate-800 code-block resize-none focus:outline-none"></textarea>
+          </div>
+
+          <!-- Pane 4: Roller Inspection Table -->
+          <div id="tab-table" class="tab-pane hidden h-full overflow-y-auto">
+            <table class="w-full text-left text-xs roller-table">
+              <thead class="sticky top-0 bg-slate-800 text-slate-300 font-semibold border-b border-slate-700">
+                <tr>
+                  <th class="px-3 py-2">ID</th>
+                  <th class="px-3 py-2">Layer</th>
+                  <th class="px-3 py-2">Angle (&theta;)</th>
+                  <th class="px-3 py-2">Pos [X, Y, Z] (m)</th>
+                  <th class="px-3 py-2">RPY [R, P, Y] (rad)</th>
+                  <th class="px-3 py-2">Axis [X, Y, Z]</th>
+                </tr>
+              </thead>
+              <tbody id="roller-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                <!-- Injected by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <!-- Custom App JS -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

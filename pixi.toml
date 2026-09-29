@@ -1,0 +1,20 @@
+[workspace]
+channels = ["conda-forge"]
+name = "Omniwheel-Collision-urdf-Tools"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+start = "python cli.py gui --reload"
+gui = "python cli.py gui"
+create-urdf = "python cli.py create-urdf"
+gen-yaml = "python cli.py gen-yaml"
+
+[dependencies]
+python = ">=3.14.7,<3.15"
+pyyaml = ">=6.0.3,<7"
+numpy = ">=2.5.3,<3"
+matplotlib = ">=3.11.2,<4"
+fastapi = ">=0.141.1,<0.142"
+uvicorn = ">=0.54.0,<0.55"
+python-multipart = ">=0.0.32,<0.0.33"

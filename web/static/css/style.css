@@ -1,0 +1,124 @@
+/* Custom styles for Omniwheel Collision URDF Studio */
+:root {
+  --primary-color: #06b6d4;
+  --primary-hover: #0891b2;
+  --bg-dark: #0f172a;
+  --bg-card: #1e293b;
+  --border-color: #334155;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-dark);
+  color: var(--text-main);
+  overflow: hidden;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Layer badge colors */
+.layer-badge-0 { background-color: #3b82f6; }
+.layer-badge-1 { background-color: #f97316; }
+.layer-badge-2 { background-color: #10b981; }
+.layer-badge-3 { background-color: #a855f7; }
+.layer-badge-4 { background-color: #ec4899; }
+.layer-badge-5 { background-color: #eab308; }
+
+/* 3D Canvas container */
+#viewport-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#three-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Tooltip overlay in 3D */
+#roller-tooltip {
+  position: absolute;
+  pointer-events: none;
+  background: rgba(15, 23, 42, 0.92);
+  border: 1px solid #38bdf8;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #e2e8f0;
+  z-index: 50;
+  display: none;
+  transition: opacity 0.15s ease;
+  backdrop-filter: blur(4px);
+}
+
+/* Code area */
+.code-block {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  tab-size: 2;
+  white-space: pre;
+}
+
+/* Input group */
+.input-number-compact {
+  width: 100%;
+  background-color: #0f172a;
+  border: 1px solid #334155;
+  color: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 13px;
+}
+.input-number-compact:focus {
+  border-color: #38bdf8;
+  outline: none;
+}
+
+/* Table styling */
+.roller-table tr:hover {
+  background-color: rgba(56, 189, 248, 0.1);
+  cursor: pointer;
+}
+.roller-table tr.selected {
+  background-color: rgba(56, 189, 248, 0.25) !important;
+  border-left: 3px solid #38bdf8;
+}
+
+/* Loading overlay */
+#loading-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#loading-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}

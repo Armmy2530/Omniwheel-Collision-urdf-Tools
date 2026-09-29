@@ -39,4 +39,6 @@ wheel_config/*
 # OS specific
 .DS_Store
 .directory
-Thumbs.db
+Thumbs.db# pixi environments
+.pixi/*
+!.pixi/config.toml
