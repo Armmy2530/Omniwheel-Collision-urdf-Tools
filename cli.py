@@ -25,11 +25,39 @@ EXAMPLE_CONFIG = CONFIG_DIR / "example.yaml"
 
 
 def cmd_gui(args):
-    """Launch the Web-based GUI visualizer."""
-    import uvicorn
+    """Launch the Web-based GUI visualizer serving docs/ statically."""
+    import http.server
+    import socketserver
+
+    docs_dir = Path(__file__).resolve().parent / "docs"
+    if not docs_dir.exists():
+        print(f"❌ Error: docs/ directory not found at {docs_dir}")
+        sys.exit(1)
+
+    class CustomHandler(http.server.SimpleHTTPRequestHandler):
+        def __init__(self, *a, **kw):
+            super().__init__(*a, directory=str(docs_dir), **kw)
+
+        def end_headers(self):
+            self.send_header("Cache-Control", "no-cache, no-store, must-revalidate")
+            self.send_header("Pragma", "no-cache")
+            self.send_header("Expires", "0")
+            super().end_headers()
+
+        def log_message(self, format, *args):
+            if "200 -" not in format % args and "304 -" not in format % args:
+                super().log_message(format, *args)
+
+    socketserver.TCPServer.allow_reuse_address = True
     display_host = "localhost" if args.host in ("0.0.0.0", "::") else args.host
-    print(f"🚀 Starting Omniwheel Studio Web GUI on http://{display_host}:{args.port} (network: http://{args.host}:{args.port})")
-    uvicorn.run("web.app:app", host=args.host, port=args.port, reload=args.reload)
+    print(f"🚀 Starting Omniwheel Studio Web GUI on http://{display_host}:{args.port}")
+    print(f"📁 Serving files from: {docs_dir}")
+    print(f"✨ 100% Client-Side Progressive Web App (identical to GitHub Pages)")
+    try:
+        with socketserver.TCPServer((args.host, args.port), CustomHandler) as httpd:
+            httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\n🛑 Stopped Omniwheel Studio Web GUI.")
 
 
 def cmd_create_urdf(args):

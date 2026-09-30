@@ -1,6 +1,10 @@
 # Omni Wheel URDF Generator & 3D Web Studio
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-cyan?style=for-the-badge&logo=github)](https://armmy2530.github.io/Omniwheel-Collision-urdf-Tools/)
+
 ![Omniwheel Collision URDF Studio](intro.png)
+
+> **🚀 Live Web Studio**: Open [https://armmy2530.github.io/Omniwheel-Collision-urdf-Tools/](https://armmy2530.github.io/Omniwheel-Collision-urdf-Tools/) directly in your browser without any installation required!
 
 This repository provides tools and an interactive Web GUI for designing, visualizing, and generating URDF/XACRO collision models for omni-directional wheels with multiple rollers.
 
@@ -120,3 +124,16 @@ Example output structure:
 
 - All measurements are in SI units (meters, radians) in code, with millimeters (mm) displayed in the Web GUI for convenience.
 - The visualization tool shows the wheel facing along the Y-axis.
+
+---
+
+## GitHub Pages Deployment
+
+The Web Studio is 100% client-side compatible and hosted automatically via GitHub Pages.
+
+To enable GitHub Pages in your repository:
+1. Go to **Settings** > **Pages** in your GitHub repository.
+2. Under **Build and deployment** > **Source**:
+   - **Recommended (Automated)**: Select **GitHub Actions**. The included workflow [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml) will build and deploy automatically on every push to `main`.
+   - **Alternative (Branch)**: Select **Deploy from a branch** -> Branch: `main`, Folder: `/docs` -> Click **Save**.
+3. Your app will be live at `https://<username>.github.io/Omniwheel-Collision-urdf-Tools/`.

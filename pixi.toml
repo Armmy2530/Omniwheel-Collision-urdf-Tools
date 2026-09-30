@@ -5,7 +5,7 @@ platforms = ["linux-64"]
 version = "0.1.0"
 
 [tasks]
-start = "python cli.py gui --reload"
+start = "python cli.py gui"
 gui = "python cli.py gui"
 create-urdf = "python cli.py create-urdf"
 gen-yaml = "python cli.py gen-yaml"

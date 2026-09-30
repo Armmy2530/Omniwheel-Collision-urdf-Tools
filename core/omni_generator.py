@@ -617,6 +617,22 @@ def generate_yaml_string(config: Dict[str, Any]) -> str:
 
 
 PRESETS = {
+    "walkie_omni_wheel": {
+        "name": "Walkie Robot Wheel (152mm, 2x14 rollers, S4)",
+        "description": "Walkie mobile robot dual-layer wheel with 28 rollers using Paper Model S4.",
+        "wheel_radius": 0.076,
+        "tangent_radius": 0.009,
+        "collider_type": "s4",
+        "roller_shape": "s4",
+        "roller_length": 0.0186,
+        "roller_weight": 0.008,
+        "roller_method": "rotation",
+        "global_rollers_per_layer": 14,
+        "layers": [
+            {"offset": -0.0095, "angle": 0.0, "rollers": 14},
+            {"offset": 0.0095, "angle": 12.86, "rollers": 14}
+        ]
+    },
     "paper_model_o": {
         "name": "Paper Model O (11-Sphere Optimized, 100mm)",
         "description": "ICRA 2024 Model O with 11 overlapping spheres and central sphere for smoothest contact and minimum drift.",

@@ -40,6 +40,22 @@ const LAYER_COLORS = [
 
 // Built-in Default Presets (Available instantly even offline)
 const DEFAULT_PRESETS = {
+  "walkie_omni_wheel": {
+    "name": "Walkie Robot Wheel (152mm, 2x14 rollers, S4)",
+    "description": "Walkie mobile robot dual-layer wheel with 28 rollers using Paper Model S4.",
+    "wheel_radius": 0.076,
+    "tangent_radius": 0.009,
+    "collider_type": "s4",
+    "roller_shape": "s4",
+    "roller_length": 0.0186,
+    "roller_weight": 0.008,
+    "roller_method": "rotation",
+    "global_rollers_per_layer": 14,
+    "layers": [
+      {"offset": -0.0095, "angle": 0.0, "rollers": 14},
+      {"offset": 0.0095, "angle": 12.86, "rollers": 14}
+    ]
+  },
   "paper_model_o": {
     "name": "Paper Model O (11-Sphere Optimized, 100mm)",
     "description": "ICRA 2024 Model O with 11 overlapping spheres and central sphere for smoothest contact and minimum drift.",
@@ -265,6 +281,296 @@ function getColliderSubelementsJS(colliderType, wheelRadiusMm, tangentRadiusMm, 
   return subs;
 }
 
+function computeCompoundInertiaJS(subelements, totalMass) {
+  let totalVol = 0;
+  subelements.forEach(s => {
+    if (s.type === 'cylinder') {
+      const h = s.length || 0.001;
+      totalVol += Math.PI * s.radius * s.radius * h;
+    } else {
+      totalVol += (4.0 / 3.0) * Math.PI * Math.pow(s.radius, 3);
+    }
+  });
+  if (totalVol <= 0) totalVol = 1.0;
+
+  let ixx = 0, iyy = 0, izz = 0;
+  subelements.forEach(s => {
+    const vol_i = (s.type === 'cylinder')
+      ? Math.PI * s.radius * s.radius * (s.length || 0.001)
+      : (4.0 / 3.0) * Math.PI * Math.pow(s.radius, 3);
+    const m_i = totalMass * (vol_i / totalVol);
+    const r = s.radius;
+    const u = s.u;
+    let i_spin, i_trans;
+    if (s.type === 'cylinder') {
+      const h = s.length || 0.001;
+      i_spin = 0.5 * m_i * r * r;
+      i_trans = (1.0 / 12.0) * m_i * (3 * r * r + h * h) + m_i * u * u;
+    } else {
+      i_spin = 0.4 * m_i * r * r;
+      i_trans = 0.4 * m_i * r * r + m_i * u * u;
+    }
+    izz += i_spin;
+    ixx += i_trans;
+    iyy += i_trans;
+  });
+  return { ixx, iyy, izz };
+}
+
+function generateUrdfSnippetJS(rollerData, sampleSubs, inertia) {
+  const prefix = state.prefix || '${prefix}';
+  const rMass = state.roller_weight_kg;
+  const rRad = (state.tangent_radius_mm / 1000.0).toFixed(6);
+  const rLen = (state.roller_length_mm / 1000.0).toFixed(6);
+  const method = state.roller_method || 'rotation';
+  const modelName = (state.roller_shape || 'o11').toUpperCase();
+  const now = new Date().toISOString().replace('T', ' ').substring(0, 19);
+
+  let xml = `<!-- =================================================================================== -->\n`;
+  xml += `<!-- Omni Wheel Collision URDF - Generated ${now} (Static Web Studio) -->\n`;
+  xml += `<!-- Collider Model: ${modelName}, Sub-elements per roller: ${sampleSubs.length} -->\n`;
+  xml += `<!-- =================================================================================== -->\n\n`;
+  xml += `<xacro:property name="roller_mass" value="${rMass}" />\n`;
+  xml += `<xacro:property name="roller_radius" value="${rRad}" />\n`;
+  xml += `<xacro:property name="roller_length" value="${rLen}" />\n\n`;
+
+  if (method === 'rotation') {
+    xml += `<!-- Roller Macro Definition (${modelName} Compound Collision & Inertia) -->\n`;
+    xml += `<xacro:macro name="roller" params="prefix num *joint_origin *joint_axis">\n`;
+    xml += `    <link name="roller_\${prefix}_\${num}_link">\n`;
+    xml += `        <inertial>\n`;
+    xml += `            <origin xyz="0 0 0" rpy="0 0 0" />\n`;
+    xml += `            <mass value="\${roller_mass}" />\n`;
+    xml += `            <inertia ixx="${inertia.ixx.toFixed(8)}" ixy="0" ixz="0" iyy="${inertia.iyy.toFixed(8)}" iyz="0" izz="${inertia.izz.toFixed(8)}" />\n`;
+    xml += `        </inertial>\n`;
+    sampleSubs.forEach((sub, sIdx) => {
+      const u = sub.u.toFixed(6);
+      const r = sub.radius.toFixed(6);
+      if (sub.type === 'cylinder') {
+        const h = (sub.length || 0.001).toFixed(6);
+        xml += `        <!-- Sub-element ${sIdx + 1}: Cylinder at u=${(sub.u * 1000).toFixed(2)}mm -->\n`;
+        xml += `        <collision>\n`;
+        xml += `            <origin xyz="0 0 ${u}" rpy="0 0 0" />\n`;
+        xml += `            <geometry>\n`;
+        xml += `                <cylinder radius="${r}" length="${h}" />\n`;
+        xml += `            </geometry>\n`;
+        xml += `        </collision>\n`;
+      } else {
+        xml += `        <!-- Sub-element ${sIdx + 1}: Sphere at u=${(sub.u * 1000).toFixed(2)}mm -->\n`;
+        xml += `        <collision>\n`;
+        xml += `            <origin xyz="0 0 ${u}" rpy="0 0 0" />\n`;
+        xml += `            <geometry>\n`;
+        xml += `                <sphere radius="${r}" />\n`;
+        xml += `            </geometry>\n`;
+        xml += `        </collision>\n`;
+      }
+    });
+    xml += `    </link>\n`;
+    xml += `    <joint name="roller_\${prefix}_\${num}_joint" type="continuous">\n`;
+    xml += `        <xacro:insert_block name="joint_origin" />\n`;
+    xml += `        <parent link="\${prefix}_wheel_link" />\n`;
+    xml += `        <child link="roller_\${prefix}_\${num}_link" />\n`;
+    xml += `        <xacro:insert_block name="joint_axis" />\n`;
+    xml += `    </joint>\n`;
+    xml += `</xacro:macro>\n\n`;
+
+    xml += `<!-- Individual Roller Joint and Link Instantiations -->\n`;
+    rollerData.forEach(item => {
+      const pos = item.position.map(v => v.toFixed(6)).join(' ');
+      const rpy = item.rpy.map(v => v.toFixed(6)).join(' ');
+      const axis = item.axis.map(v => v.toFixed(6)).join(' ');
+      xml += `<xacro:roller prefix="${prefix}" num="${item.id}">\n`;
+      xml += `    <origin xyz="${pos}" rpy="${rpy}" />\n`;
+      xml += `    <axis xyz="${axis}" />\n`;
+      xml += `</xacro:roller>\n`;
+    });
+  } else {
+    xml += `<!-- Roller Macro Definition (Legacy Axis Mode) -->\n`;
+    xml += `<xacro:macro name="roller" params="prefix num *joint_origin *joint_axis *collisions">\n`;
+    xml += `    <link name="roller_\${prefix}_\${num}_link">\n`;
+    xml += `        <inertial>\n`;
+    xml += `            <origin xyz="0 0 0" rpy="0 0 0" />\n`;
+    xml += `            <mass value="\${roller_mass}" />\n`;
+    xml += `            <inertia ixx="${inertia.ixx.toFixed(8)}" ixy="0" ixz="0" iyy="${inertia.iyy.toFixed(8)}" iyz="0" izz="${inertia.izz.toFixed(8)}" />\n`;
+    xml += `        </inertial>\n`;
+    xml += `        <xacro:insert_block name="collisions" />\n`;
+    xml += `    </link>\n`;
+    xml += `    <joint name="roller_\${prefix}_\${num}_joint" type="continuous">\n`;
+    xml += `        <xacro:insert_block name="joint_origin" />\n`;
+    xml += `        <parent link="\${prefix}_wheel_link" />\n`;
+    xml += `        <child link="roller_\${prefix}_\${num}_link" />\n`;
+    xml += `        <xacro:insert_block name="joint_axis" />\n`;
+    xml += `    </joint>\n`;
+    xml += `</xacro:macro>\n\n`;
+
+    xml += `<!-- Individual Roller Joint and Link Instantiations -->\n`;
+    rollerData.forEach(item => {
+      const pos = item.position.map(v => v.toFixed(6)).join(' ');
+      const rpy = item.rpy.map(v => v.toFixed(6)).join(' ');
+      const axis = item.axis.map(v => v.toFixed(6)).join(' ');
+      const theta_rad = item.theta_deg * Math.PI / 180.0;
+      const sin_t = Math.sin(theta_rad);
+      const cos_t = Math.cos(theta_rad);
+      const c_rpy_str = `0.0 ${(-theta_rad).toFixed(6)} 0.0`;
+
+      xml += `<xacro:roller prefix="${prefix}" num="${item.id}">\n`;
+      xml += `    <origin xyz="${pos}" rpy="${rpy}" />\n`;
+      xml += `    <axis xyz="${axis}" />\n`;
+      xml += `    <collisions>\n`;
+      sampleSubs.forEach(sub => {
+        const sub_x = (-sub.u * sin_t).toFixed(6);
+        const sub_z = (sub.u * cos_t).toFixed(6);
+        const r = sub.radius.toFixed(6);
+        if (sub.type === 'cylinder') {
+          const h = (sub.length || 0.001).toFixed(6);
+          xml += `        <collision>\n`;
+          xml += `            <origin xyz="${sub_x} 0 ${sub_z}" rpy="${c_rpy_str}" />\n`;
+          xml += `            <geometry>\n`;
+          xml += `                <cylinder radius="${r}" length="${h}" />\n`;
+          xml += `            </geometry>\n`;
+          xml += `        </collision>\n`;
+        } else {
+          xml += `        <collision>\n`;
+          xml += `            <origin xyz="${sub_x} 0 ${sub_z}" rpy="0 0 0" />\n`;
+          xml += `            <geometry>\n`;
+          xml += `                <sphere radius="${r}" />\n`;
+          xml += `            </geometry>\n`;
+          xml += `        </collision>\n`;
+        }
+      });
+      xml += `    </collisions>\n`;
+      xml += `</xacro:roller>\n`;
+    });
+  }
+  return xml;
+}
+
+function generateFullStandaloneUrdfJS(rollerData, sampleSubs, inertia) {
+  const wheelName = state.wheel_name || 'omni_wheel';
+  const wheelRadius = state.wheel_radius_mm / 1000.0;
+  const tangentRadius = state.tangent_radius_mm / 1000.0;
+  const rollerLength = state.roller_length_mm / 1000.0;
+  const method = state.roller_method || 'rotation';
+  const hubRadius = Math.max(0.001, (wheelRadius - tangentRadius)).toFixed(4);
+  const hubLength = (tangentRadius * 2.0).toFixed(4);
+
+  let xml = `<?xml version="1.0"?>\n`;
+  xml += `<robot name="${wheelName}_model">\n`;
+  xml += `  <!-- Base Footprint / Chassis Mount -->\n`;
+  xml += `  <link name="base_link">\n`;
+  xml += `    <visual>\n`;
+  xml += `      <origin xyz="0 0 0" rpy="0 0 0"/>\n`;
+  xml += `      <geometry><sphere radius="0.005"/></geometry>\n`;
+  xml += `      <material name="dark_gray"><color rgba="0.2 0.2 0.2 1.0"/></material>\n`;
+  xml += `    </visual>\n`;
+  xml += `  </link>\n\n`;
+
+  xml += `  <!-- Wheel Hub Link -->\n`;
+  xml += `  <link name="${wheelName}_hub_link">\n`;
+  xml += `    <visual>\n`;
+  xml += `      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>\n`;
+  xml += `      <geometry><cylinder radius="${hubRadius}" length="${hubLength}"/></geometry>\n`;
+  xml += `      <material name="hub_mat"><color rgba="0.15 0.35 0.8 0.85"/></material>\n`;
+  xml += `    </visual>\n`;
+  xml += `    <collision>\n`;
+  xml += `      <origin xyz="0 0 0" rpy="1.57079632679 0 0"/>\n`;
+  xml += `      <geometry><cylinder radius="${hubRadius}" length="${hubLength}"/></geometry>\n`;
+  xml += `    </collision>\n`;
+  xml += `    <inertial>\n`;
+  xml += `      <mass value="0.3"/>\n`;
+  xml += `      <inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/>\n`;
+  xml += `    </inertial>\n`;
+  xml += `  </link>\n\n`;
+
+  xml += `  <!-- Wheel Joint -->\n`;
+  xml += `  <joint name="${wheelName}_joint" type="continuous">\n`;
+  xml += `    <parent link="base_link"/>\n`;
+  xml += `    <child link="${wheelName}_hub_link"/>\n`;
+  xml += `    <origin xyz="0 0 ${wheelRadius.toFixed(4)}" rpy="0 0 0"/>\n`;
+  xml += `    <axis xyz="0 1 0"/>\n`;
+  xml += `  </joint>\n\n`;
+
+  rollerData.forEach(item => {
+    const i = item.id;
+    const pos = item.position.map(v => v.toFixed(6)).join(' ');
+    const rpy = item.rpy.map(v => v.toFixed(6)).join(' ');
+    const axis = item.axis.map(v => v.toFixed(6)).join(' ');
+    const theta_rad = item.theta_deg * Math.PI / 180.0;
+    const sin_t = Math.sin(theta_rad);
+    const cos_t = Math.cos(theta_rad);
+    const c_rpy_str = `0.0 ${(-theta_rad).toFixed(6)} 0.0`;
+
+    xml += `  <!-- Roller ${i} -->\n`;
+    xml += `  <link name="${wheelName}_roller_${i}_link">\n`;
+    xml += `    <inertial>\n`;
+    xml += `      <origin xyz="0 0 0" rpy="0 0 0"/>\n`;
+    xml += `      <mass value="${state.roller_weight_kg}"/>\n`;
+    xml += `      <inertia ixx="${inertia.ixx.toFixed(8)}" ixy="0" ixz="0" iyy="${inertia.iyy.toFixed(8)}" iyz="0" izz="${inertia.izz.toFixed(8)}"/>\n`;
+    xml += `    </inertial>\n`;
+
+    sampleSubs.forEach(sub => {
+      let sub_xyz, sub_rpy;
+      if (method === 'rotation') {
+        sub_xyz = `0 0 ${sub.u.toFixed(6)}`;
+        sub_rpy = "0 0 0";
+      } else {
+        const sx = (-sub.u * sin_t).toFixed(6);
+        const sz = (sub.u * cos_t).toFixed(6);
+        sub_xyz = `${sx} 0 ${sz}`;
+        sub_rpy = (sub.type === 'cylinder') ? c_rpy_str : "0 0 0";
+      }
+      const r = sub.radius.toFixed(6);
+      if (sub.type === 'cylinder') {
+        const h = (sub.length || 0.001).toFixed(6);
+        xml += `    <collision>\n`;
+        xml += `      <origin xyz="${sub_xyz}" rpy="${sub_rpy}"/>\n`;
+        xml += `      <geometry><cylinder radius="${r}" length="${h}"/></geometry>\n`;
+        xml += `    </collision>\n`;
+      } else {
+        xml += `    <collision>\n`;
+        xml += `      <origin xyz="${sub_xyz}" rpy="${sub_rpy}"/>\n`;
+        xml += `      <geometry><sphere radius="${r}"/></geometry>\n`;
+        xml += `    </collision>\n`;
+      }
+    });
+
+    const vis_rpy = (method === 'rotation') ? "0 0 0" : c_rpy_str;
+    xml += `    <visual>\n`;
+    xml += `      <origin xyz="0 0 0" rpy="${vis_rpy}"/>\n`;
+    xml += `      <geometry><cylinder radius="${tangentRadius.toFixed(6)}" length="${rollerLength.toFixed(6)}"/></geometry>\n`;
+    xml += `      <material name="roller_mat_${i}"><color rgba="0.85 0.45 0.1 0.95"/></material>\n`;
+    xml += `    </visual>\n`;
+    xml += `  </link>\n`;
+
+    xml += `  <joint name="${wheelName}_roller_${i}_joint" type="continuous">\n`;
+    xml += `    <parent link="${wheelName}_hub_link"/>\n`;
+    xml += `    <child link="${wheelName}_roller_${i}_link"/>\n`;
+    xml += `    <origin xyz="${pos}" rpy="${rpy}"/>\n`;
+    xml += `    <axis xyz="${axis}"/>\n`;
+    xml += `  </joint>\n\n`;
+  });
+
+  xml += `</robot>`;
+  return xml;
+}
+
+function generateYamlStringJS(rollerData) {
+  let yaml = `wheel_radius: ${(state.wheel_radius_mm / 1000.0)}\n`;
+  yaml += `tangent_radius: ${(state.tangent_radius_mm / 1000.0)}\n`;
+  yaml += `roller_shape: ${state.roller_shape}\n`;
+  yaml += `collider_type: ${state.roller_shape}\n`;
+  yaml += `roller_length: ${(state.roller_length_mm / 1000.0)}\n`;
+  yaml += `roller_weight: ${state.roller_weight_kg}\n`;
+  yaml += `roller_count: ${rollerData.length}\n`;
+  yaml += `roller_method: ${state.roller_method}\n`;
+  yaml += `position:\n`;
+  rollerData.forEach(r => {
+    const ax = r.world_axis || r.axis;
+    yaml += `- [${r.theta_deg.toFixed(4)}, ${r.offset_m.toFixed(6)}, [${ax[0].toFixed(6)}, ${ax[1].toFixed(6)}, ${ax[2].toFixed(6)}]]\n`;
+  });
+  return yaml;
+}
+
 function localComputeRollerData() {
   const amp = (state.wheel_radius_mm - state.tangent_radius_mm) / 1000.0;
   const roller_data = [];
@@ -281,6 +587,8 @@ function localComputeRollerData() {
     radius: s.radius_mm / 1000.0,
     length: (s.length_mm || 0) / 1000.0
   }));
+
+  const inertia = computeCompoundInertiaJS(sampleSubs, state.roller_weight_kg);
 
   state.layers.forEach((layer, l_idx) => {
     const offset = layer.offset_mm / 1000.0;
@@ -306,13 +614,22 @@ function localComputeRollerData() {
         axis: axis,
         world_axis: world_axis,
         layer: l_idx,
-        subelements: sampleSubs
+        subelements: sampleSubs,
+        inertia: inertia
       });
     }
   });
 
+  const urdfSnippet = generateUrdfSnippetJS(roller_data, sampleSubs, inertia);
+  const fullUrdf = generateFullStandaloneUrdfJS(roller_data, sampleSubs, inertia);
+  const yamlContent = generateYamlStringJS(roller_data);
+
   return {
+    success: true,
     roller_data: roller_data,
+    urdf_snippet: urdfSnippet,
+    full_urdf: fullUrdf,
+    yaml_content: yamlContent,
     metrics: {
       total_rollers: roller_data.length,
       outer_diameter_mm: state.wheel_radius_mm * 2,
@@ -755,40 +1072,50 @@ function triggerCompute() {
 }
 
 async function performCompute() {
-  const payload = {
-    wheel_radius: state.wheel_radius_mm / 1000.0,
-    tangent_radius: state.tangent_radius_mm / 1000.0,
-    roller_shape: state.roller_shape,
-    collider_type: state.roller_shape,
-    roller_length: state.roller_length_mm / 1000.0,
-    roller_weight: state.roller_weight_kg,
-    roller_method: state.roller_method,
-    prefix: state.prefix,
-    wheel_name: state.wheel_name,
-    layers: state.layers.map(l => ({
-      offset: l.offset_mm / 1000.0,
-      angle: l.angle_deg,
-      rollers: parseInt(l.rollers)
-    }))
-  };
+  // 1. Instant client-side compute (works 100% offline & on GitHub Pages)
+  const localData = localComputeRollerData();
+  state.currentData = localData;
+  updateThreeScene(localData);
+  updateMetricsHUD(localData.metrics);
+  updateTabOutputs(localData);
 
-  try {
-    const res = await fetch('/api/compute', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    if (data.success) {
-      state.currentData = data;
-      updateThreeScene(data);
-      updateMetricsHUD(data.metrics);
-      updateTabOutputs(data);
-    } else {
-      console.error("Compute error:", data.error);
+  // 2. If running locally with FastAPI backend, sync with server
+  if (window.location.protocol.startsWith('http') && !window.location.hostname.endsWith('github.io')) {
+    const payload = {
+      wheel_radius: state.wheel_radius_mm / 1000.0,
+      tangent_radius: state.tangent_radius_mm / 1000.0,
+      roller_shape: state.roller_shape,
+      collider_type: state.roller_shape,
+      roller_length: state.roller_length_mm / 1000.0,
+      roller_weight: state.roller_weight_kg,
+      roller_method: state.roller_method,
+      prefix: state.prefix,
+      wheel_name: state.wheel_name,
+      layers: state.layers.map(l => ({
+        offset: l.offset_mm / 1000.0,
+        angle: l.angle_deg,
+        rollers: parseInt(l.rollers)
+      }))
+    };
+
+    try {
+      const res = await fetch('/api/compute', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) {
+          state.currentData = data;
+          updateThreeScene(data);
+          updateMetricsHUD(data.metrics);
+          updateTabOutputs(data);
+        }
+      }
+    } catch (err) {
+      // Static mode: ignore fetch error, local compute is already active!
     }
-  } catch (err) {
-    console.error("Fetch error:", err);
   }
 }
 
@@ -1244,52 +1571,110 @@ async function handleFileUpload(e) {
   const file = e.target.files[0];
   if (!file) return;
 
-  const formData = new FormData();
-  formData.append('file', file);
-
-  try {
-    const res = await fetch('/api/upload-yaml', {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    if (data.success) {
-      applyParsedData(data);
-      alert(`Loaded ${file.name} successfully!`);
-    } else {
-      alert("Error parsing file: " + data.error);
+  const reader = new FileReader();
+  reader.onload = async function(evt) {
+    const content = evt.target.result;
+    if (typeof jsyaml !== 'undefined') {
+      try {
+        const cfg = jsyaml.load(content);
+        if (cfg && (cfg.wheel_radius || cfg.position)) {
+          applyParsedConfigDirect(cfg, file.name);
+          return;
+        }
+      } catch (err) {
+        console.warn("Client-side YAML parse warning, trying backend:", err);
+      }
     }
-  } catch (err) {
-    alert("Upload failed: " + err.message);
+
+    // Fallback to backend upload if running with FastAPI
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/upload-yaml', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        applyParsedData(data);
+        alert(`Loaded ${file.name} successfully!`);
+      } else {
+        alert("Error parsing file: " + data.error);
+      }
+    } catch (err) {
+      alert("Error parsing YAML file: " + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+function applyParsedConfigDirect(cfg, filename) {
+  state.wheel_radius_mm = (cfg.wheel_radius || 0.05) * 1000;
+  state.tangent_radius_mm = (cfg.tangent_radius || 0.008) * 1000;
+  state.roller_shape = cfg.collider_type || cfg.roller_shape || 'o11';
+  state.roller_length_mm = (cfg.roller_length || (cfg.tangent_radius * 2.5)) * 1000;
+  state.roller_weight_kg = cfg.roller_weight || 0.012;
+  state.roller_method = cfg.roller_method || 'rotation';
+
+  document.getElementById('wheel-radius').value = state.wheel_radius_mm;
+  document.getElementById('tangent-radius').value = state.tangent_radius_mm;
+  document.getElementById('roller-shape').value = state.roller_shape;
+  document.getElementById('roller-length').value = state.roller_length_mm;
+  document.getElementById('roller-weight').value = state.roller_weight_kg;
+  document.getElementById('roller-method').value = state.roller_method;
+
+  const rlenContainer = document.getElementById('roller-length-container');
+  if (rlenContainer) {
+    rlenContainer.style.opacity = (state.roller_shape === 'sphere') ? '0.5' : '1';
   }
+
+  // Infer layers from positions if positions exist
+  if (cfg.position && Array.isArray(cfg.position)) {
+    const offsets = [...new Set(cfg.position.map(p => p[1]))];
+    state.layers = offsets.map(off => {
+      const layerRollers = cfg.position.filter(p => p[1] === off);
+      const minAngle = Math.min(...layerRollers.map(p => p[0]));
+      return {
+        offset_mm: off * 1000,
+        angle_deg: minAngle,
+        rollers: layerRollers.length
+      };
+    });
+  }
+
+  renderLayersUI();
+  performCompute();
+  alert(`Loaded ${filename || 'configuration'} successfully!`);
 }
 
 async function saveToServer() {
   if (!state.currentData) return;
-  const yamlFilename = prompt("Enter YAML filename to save into wheel_config/:", "omni_wheel_config.yml");
+  const yamlFilename = prompt("Enter YAML filename:", "omni_wheel_config.yml");
   if (!yamlFilename) return;
 
-  try {
-    const res = await fetch('/api/save-files', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        yaml_content: state.currentData.yaml_content,
-        urdf_content: state.currentData.urdf_snippet,
-        yaml_filename: yamlFilename,
-        urdf_filename: "output.txt"
-      })
-    });
-    const result = await res.json();
-    if (result.success) {
-      alert(`Saved successfully!\nYAML: ${result.saved_yaml}\nURDF: ${result.saved_urdf}`);
-      loadSavedConfigsList();
-    } else {
-      alert("Save failed: " + result.error);
+  if (window.location.protocol.startsWith('http') && !window.location.hostname.endsWith('github.io')) {
+    try {
+      const res = await fetch('/api/save-files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          yaml_content: state.currentData.yaml_content,
+          urdf_content: state.currentData.urdf_snippet,
+          yaml_filename: yamlFilename,
+          urdf_filename: "output.txt"
+        })
+      });
+      const result = await res.json();
+      if (result.success) {
+        alert(`Saved successfully!\nYAML: ${result.saved_yaml}\nURDF: ${result.saved_urdf}`);
+        loadSavedConfigsList();
+        return;
+      }
+    } catch (err) {
+      // Fallback to client-side download below
     }
-  } catch (err) {
-    alert("Error: " + err.message);
   }
+
+  // Client-side download fallback (for GitHub Pages & offline use)
+  downloadFile(yamlFilename, state.currentData.yaml_content, 'text/yaml');
+  alert(`Downloaded ${yamlFilename} to your browser downloads.`);
 }
 
 /* -------------------------------------------------------------
